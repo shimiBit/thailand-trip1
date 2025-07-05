@@ -3,913 +3,571 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מסלול טיול לתאילנד | משפחות ראש וביטן</title>
+    <title>מסלול טיול לתאילנד - משפחת ראש וביטן</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Warm Neutrals (Beige, Muted Gold, Muted Green, Amber) -->
-    <!-- Application Structure Plan: An initial splash screen welcomes the user. A button leads to the choice screen with three options. Clicking a choice reveals a container with a tailored tab navigation. Common tabs like Logistics and Travelers are reused. The Itinerary and Map/Gallery tabs are specific to the chosen plan. This creates a clear, task-oriented flow. -->
-    <!-- Visualization & Content Choices: 1. 3D Globe: Goal=Provide an immersive, global context for the trip. Viz=three.js globe. Interaction=Automatic flight animation to the route, then free orbit controls. Justification=High "wow" factor and excellent spatial visualization. 2. Interactive Maps: Three separate Leaflet maps are now used, one for each itinerary, initialized only when their respective tabs are shown. This keeps the maps clean and relevant. 3. KML Downloads: Separate download buttons for each plan's KML file. -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals (amber/stone background, dark slate text, subtle teal accents) -->
+    <!-- Application Structure Plan: A tab-based SPA structure with primary sections for each destination (Phuket, Koh Samui, Bangkok) and an overview. This non-linear design is superior to a simple document because it allows the family to instantly access information relevant to their current location without scrolling. The core interaction is the daily accordion within each city's tab. Clicking a day not only expands to show detailed plans but also dynamically updates an embedded Google Map with that day's specific route. This integrates planning and navigation seamlessly, making it highly usable in the field. A dedicated weather chart provides a quick, comparative overview, aiding in daily preparation. -->
+    <!-- Visualization & Content Choices: Report Info: Weather statistics -> Goal: Compare -> Viz/Presentation Method: Bar Chart -> Interaction: Hover for data -> Justification -> Library/Method: Chart.js for a clear, visual comparison of conditions across destinations. Report Info: Daily itineraries and travel routes -> Goal: Organize & Guide -> Viz/Presentation Method: HTML/CSS accordion for daily plans + an embedded iframe for Google Maps -> Interaction: Click on a day's header updates the map's src URL via JavaScript -> Justification: This creates a focused, task-oriented view for the user, preventing information overload and directly linking the plan to its geographical context. Report Info: Costs, kosher info, addresses -> Goal: Inform -> Viz/Presentation Method: Structured text blocks styled with Tailwind CSS -> Interaction: Static display -> Justification: Presents essential data clearly and legibly without unnecessary complexity. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Assistant', sans-serif;
-            background-color: #FDFBF8;
-            color: #4A4A4A;
-        }
-        .chart-container {
-            position: relative;
-            width: 100%;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-            height: 250px;
-            max-height: 300px;
-        }
-        #interactive_map, #alternative_interactive_map, #itinerary3_interactive_map {
-            height: 400px;
-            border-radius: 1rem;
-            z-index: 0;
-        }
-        .map-3d-container {
-            height: 400px;
-            border-radius: 1rem;
-            background-color: #00001a;
-            cursor: grab;
-        }
-        @media (min-width: 768px) {
-            .chart-container {
-                height: 300px;
-                max-height: 350px;
-            }
-            #interactive_map, #alternative_interactive_map, #itinerary3_interactive_map, .map-3d-container {
-                height: 500px;
-            }
+            scroll-behavior: smooth;
         }
         .tab-button.active {
-            border-color: #D4A373;
-            background-color: #F9F4EE;
-            color: #4A4A4A;
-            font-weight: 600;
+            background-color: #0d9488;
+            color: white;
+            border-color: #0d9488;
         }
-        .accordion-content {
+        .day-item.active {
+            background-color: #f0fdfa;
+        }
+        .day-content {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.5s ease-out;
         }
-        .accordion-button.open .accordion-arrow {
-            transform: rotate(180deg);
+        .map-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
-        .gallery-item {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        .map-container {
+            position: relative;
+            padding-bottom: 75%; 
+            height: 0;
+            overflow: hidden;
+            background-color: #e5e7eb; /* Fallback background for map */
         }
-        .gallery-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        .chart-container-small {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            max-width: 500px;
+            margin: auto;
         }
-        .leaflet-popup-content {
-            font-family: 'Assistant', sans-serif;
+        .toc-button {
+            width: 100%;
             text-align: right;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s;
         }
-        .legend {
-            padding: 6px 10px;
-            font-family: 'Assistant', sans-serif;
-            background: white;
-            background: rgba(255,255,255,0.9);
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            border-radius: 5px;
-            text-align: right;
+        .toc-button:hover {
+            background-color: #e0f2f1;
         }
-        .legend i {
-            width: 16px;
-            height: 16px;
-            float: right;
-            margin-left: 8px;
-            border-radius: 50%;
-            border: 1px solid #777;
-        }
-        .choice-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .choice-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-        #animated-text p {
-            transition: opacity 0.5s ease-in-out;
+        .toc-button.active {
+            background-color: #a7f3d0;
+            font-weight: 600;
         }
     </style>
 </head>
-<body class="antialiased">
+<body class="bg-amber-50 text-slate-800">
 
-    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl">
-
+    <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
-            <h1 class="text-4xl md:text-5xl font-bold text-[#4A4A4A]">הטיול לתאילנד</h1>
-            <p class="text-lg md:text-xl text-gray-600 mt-2">משפחות ראש וביטן | 5–23 יולי 2025</p>
+            <h1 class="text-4xl md:text-5xl font-bold text-teal-800">המסע לתאילנד</h1>
+            <p class="text-lg text-slate-600 mt-2">מסלול הטיול האינטראקטיבי למשפחת ראש וביטן | יולי 2025</p>
         </header>
 
-        <div id="splash-screen">
-            <div class="text-center bg-white p-10 rounded-2xl shadow-xl min-h-[300px] flex flex-col justify-center">
-                 <h2 id="splash-title" class="text-3xl md:text-4xl font-bold text-[#D4A373] opacity-0" style="transition: opacity 1s;"></h2>
-                 <div id="animated-text" class="mt-4 text-lg text-gray-600 h-24"></div>
-                 <button id="start-planning-btn" class="mt-8 bg-[#5A8C78] text-white font-bold py-3 px-8 rounded-lg hover:bg-[#4a7867] transition-colors duration-300 shadow-md opacity-0" style="transition: opacity 1s;">
-                    בחירת מסלול טיול
-                </button>
+        <nav id="nav-tabs" class="flex flex-wrap justify-center gap-2 mb-8">
+            <button data-tab="overview" class="tab-button active text-sm md:text-base font-semibold py-2 px-4 border-2 border-teal-600 rounded-full transition-colors duration-300 hover:bg-teal-100">סקירה כללית</button>
+            <button data-tab="phuket" class="tab-button text-sm md:text-base font-semibold py-2 px-4 border-2 border-teal-600 rounded-full transition-colors duration-300 hover:bg-teal-100">✈️ פוקט</button>
+            <button data-tab="samui" class="tab-button text-sm md:text-base font-semibold py-2 px-4 border-2 border-teal-600 rounded-full transition-colors duration-300 hover:bg-teal-100">🥥 קוסמוי</button>
+            <button data-tab="bangkok" class="tab-button text-sm md:text-base font-semibold py-2 px-4 border-2 border-teal-600 rounded-full transition-colors duration-300 hover:bg-teal-100">🏙️ בנגקוק</button>
+        </nav>
+
+        <main>
+            <!-- Overview Tab -->
+            <div id="overview-content" class="tab-content">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4 border-b-2 pb-2 border-teal-200">ברוכים הבאים להרפתקה!</h2>
+                    <p class="mb-4 text-slate-700">דף זה הוא המדריך האינטראקטיבי שלכם לטיול בתאילנד. הוא נועד להפוך את הניווט והתכנון לקלים ומהנים. תוכלו לעבור בין היעדים השונים באמצעות הכפתורים שלמעלה. בכל יעד, לחצו על היום המבוקש כדי לראות את פרטי התוכנית והמפה הרלוונטית.</p>
+                    
+                    <div class="bg-teal-50 border-r-4 border-teal-500 p-4 rounded-lg mb-8">
+                        <h3 class="text-xl font-semibold text-teal-800 mb-2">השוואת מזג אוויר כללית ליולי</h3>
+                        <div class="chart-container-small">
+                            <canvas id="weatherChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 border-r-4 border-blue-500 p-4 rounded-lg">
+                        <h3 class="text-xl font-semibold text-blue-800 mb-2">מפת תוואי הטיול הכללית</h3>
+                        <p class="text-sm text-slate-600 mb-4">לחצו על נקודה בתוכן העניינים כדי לראות את הקטע הבא במסלול.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="md:col-span-2 map-container rounded-lg shadow-md w-full">
+                                <iframe
+                                    id="overview-map-iframe"
+                                    loading="lazy"
+                                    allowfullscreen
+                                    src="https://www.google.com/maps/embed/v1/view?key=AIzaSyBYFLOsU9_GNOAp6ddyz78r9MAUW6G3rtM&center=13.7563,100.5018&zoom=5">
+                                </iframe>
+                            </div>
+                            <div class="md:col-span-1">
+                                <h4 class="font-bold text-slate-700 mb-2">תוכן עניינים למסלול:</h4>
+                                <ol id="trip-toc" class="list-decimal list-inside space-y-1 text-slate-800"></ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div id="initial-choice" style="display: none;">
-            <h2 class="text-2xl md:text-3xl font-bold text-center mb-6">בחר מסלול טיול לצפייה</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                <div id="choice-1" class="choice-card cursor-pointer bg-white p-8 rounded-2xl shadow-lg border-2 border-transparent hover:border-[#D4A373]">
-                    <h3 class="text-2xl font-bold text-center text-[#D4A373]">מסלול טיול 1</h3>
-                    <p class="text-center mt-4 text-gray-600">המסלול המקורי המשלב תרבות, נופים ואטרקציות מגוונות לכל המשפחה.</p>
-                </div>
-                <div id="choice-2" class="choice-card cursor-pointer bg-white p-8 rounded-2xl shadow-lg border-2 border-transparent hover:border-[#5A8C78]">
-                    <h3 class="text-2xl font-bold text-center text-[#5A8C78]">מסלול טיול 2</h3>
-                    <p class="text-center mt-4 text-gray-600">מסלול עם דגש על חופים, שייט, אטרקציות ימיות ומרכזי קניות.</p>
-                </div>
-                 <div id="choice-3" class="choice-card cursor-pointer bg-white p-8 rounded-2xl shadow-lg border-2 border-transparent hover:border-[#a56e58]">
-                    <h3 class="text-2xl font-bold text-center text-[#a56e58]">מסלול טיול 3</h3>
-                    <p class="text-center mt-4 text-gray-600">מסלול עם דגש על טבע, הרפתקאות וביקור בפארק הלאומי קאו סוק.</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="plan-content" style="display: none;">
-            <div class="text-center mb-6">
-                 <button id="back-to-choice" class="text-sm text-gray-600 hover:text-black underline">חזרה לבחירת מסלול</button>
-            </div>
-            <nav id="main-nav" class="flex flex-wrap justify-center border-b-2 border-gray-200 mb-8 space-x-1 space-x-reverse"></nav>
-
-            <main>
-                <div id="overview" class="tab-content">
-                     <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm mb-8">
-                        <h2 class="text-2xl font-bold mb-4 text-center">הטיול במבט חטוף</h2>
-                        <p class="text-center text-gray-600 max-w-3xl mx-auto mb-6">
-                            ברוכים הבאים ללוח הבקרה של הטיול שלכם! כאן תוכלו לראות את חלוקת הימים בין היעדים השונים, לקבל נתונים מרכזיים על הטיול, ולנווט בקלות בין החלקים השונים של התכנון. המטרה היא לתת לכם תמונה כללית וברורה של המסע המופלא שלפניכם.
-                        </p>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center mb-8">
-                            <div class="bg-[#F9F4EE] p-4 rounded-lg"><p class="text-3xl font-bold text-[#D4A373]">19</p><p class="text-gray-600">ימי טיול</p></div>
-                            <div class="bg-[#F9F4EE] p-4 rounded-lg"><p class="text-3xl font-bold text-[#D4A373]">10</p><p class="text-gray-600">נוסעים</p></div>
-                            <div class="bg-[#F9F4EE] p-4 rounded-lg"><p class="text-3xl font-bold text-[#D4A373]">3</p><p class="text-gray-600">יעדים מרכזיים</p></div>
-                        </div>
-                         <div class="chart-container">
-                            <canvas id="timelineChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="itinerary" class="tab-content">
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-2xl font-bold mb-4 text-center">מסלול טיול 1</h2>
-                         <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">
-                            כאן תוכלו לצלול לפרטי המסלול, יום אחר יום. כל יעד מרכזי קיבל מקטע משלו, אותו ניתן לפתוח ולסגור כדי להתמקד בחלק הרלוונטי של הטיול.
-                        </p>
-                        <div class="space-y-4">
-                            <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>✈️ יציאה והגעה לתאילנד (5-6 יולי)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5"><div class="border-r-2 border-[#D4A373] pr-4 space-y-4"><p><strong>5 ביולי:</strong> טיסת לילה מתל אביב לבנגקוק עם אל על (LY0081), המראה ב-23:30.</p><p><strong>6 ביולי:</strong> נחיתה בבנגקוק ב-15:10 והמתנה לטיסת המשך לפוקט עם בנגקוק איירווייז (PG0277) ב-17:00. נחיתה בפוקט ב-18:30, מעבר למלון וצ'ק-אין.</p></div></div>
-                            </div>
-                            <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🏝️ פוקט (6-11 יולי, 5 לילות)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                     <div class="border-r-2 border-[#D4A373] pr-4 space-y-4">
-                                        <p><strong>לינה:</strong> Hotel Indigo Phuket Patong. <span class="font-semibold text-green-700">הזמנה מאושרת.</span></p>
-                                        <p><strong>7 ביולי:</strong> יום התאקלמות. מנוחה בבריכת המלון, היכרות עם אזור חוף פטונג וארוחת ערב ראשונה.</p>
-                                        <p><strong>8 ביולי:</strong> טיול יום לאיי פיפי ו"מאיה ביי". שייט, שנורקלינג וחופים מרהיבים.</p>
-                                        <p><strong>9 ביולי:</strong> תרבות ונופים. ביקור ב"בודהה הגדול" לתצפית פנורמית וסיור בעיר העתיקה של פוקט.</p>
-                                        <p><strong>10 ביולי:</strong> יום כיף ואטרקציות. אפשרויות: פארק מים, חוות פילים אתית או פארק חבלים.</p>
-                                     </div>
-                                     <div class="mt-6 pt-4 border-t border-gray-300 space-y-4">
-                                        <h4 class="font-bold text-lg">☀️ מזג אוויר ולבוש</h4>
-                                        <p>יולי בפוקט הוא חלק מעונת המונסונים. צפו למזג אוויר חם (סביב 25-31 מעלות) ולח, עם סיכוי גבוה לממטרים חזקים וקצרים, בעיקר אחה"צ. השמש מופיעה לרוב בין הגשמים.</p>
-                                        <p><strong>לבוש מומלץ:</strong> בגדים קצרים וקלילים מבדים נושמים (כותנה, פשתן), בגדי ים, כובע, משקפי שמש, סנדלים ומעיל גשם דק או מטריה לממטרים הבלתי צפויים.</p>
-                                        <h4 class="font-bold text-lg mt-4">✡️ כשרות ובית חב"ד</h4>
-                                        <p><strong>בית חב"ד פוקט:</strong> ממוקם בלב פטונג ומציע מסעדה בשרית ופיצרייה חלבית. זהו המרכז לקהילה היהודית והישראלית באזור.</p>
-                                        <p><strong>כתובת:</strong> 9/6 Rat-U-Thit 200 Pee Road, Patong.</p>
-                                        <h4 class="font-bold text-lg mt-4">💰 עלויות ונסיעות (הערכה)</h4>
-                                        <p><strong>אוכל כשר:</strong> ארוחה בבית חב"ד כ-400-700 באט לאדם.</p>
-                                        <p><strong>נסיעות:</strong> מונית משדה"ת לפטונג (כ-40 ק"מ) כ-800-1,200 באט. נסיעה מפטונג לפוקט טאון (כ-15 ק"מ) או לבודהה הגדול (כ-23 ק"מ) תסוכם מראש עם נהג.</p>
-                                        <h4 class="font-bold text-lg mt-4">🗺️ מפת הגעה</h4>
-                                        <a href="https://www.google.com/maps/search/?api=1&query=Hotel+Indigo+Phuket+Patong" target="_blank" class="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">פתח מפת הגעה למלון</a>
-                                     </div>
-                                </div>
-                            </div>
-                             <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🥥 קוסמוי (11-20 יולי, 9 לילות)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                   <div class="border-r-2 border-[#D4A373] pr-4 space-y-6">
-                                        <div>
-                                            <p><strong>11 ביולי:</strong> טיסת בוקר מפוקט לקוסמוי (PG250) ב-11:00. נחיתה ב-11:55 ומעבר למלון הראשון.</p>
-                                            <p><strong>לינה (11-15 ביולי):</strong> Combo Beach Club & Resort. <span class="font-semibold text-orange-600">הזמנה בהמתנה.</span></p>
-                                            <p><strong>12 ביולי:</strong> טיול יום לפארק הלאומי הימי אנג ת'ונג. שייט קיאקים, שנורקלינג ותצפיות.</p>
-                                            <p><strong>13 ביולי:</strong> חקירת חופים. ביקור בחוף למאי, חוף סילבר וכפר הדייגים בבופוט.</p>
-                                            <p><strong>14 ביולי:</strong> טבע וטעמים. טיול למפלי נאמטוק וסדנת בישול תאילנדי.</p>
-                                        </div>
-                                        <div class="border-t pt-4"><p><strong>15 ביולי:</strong> מעבר למלון השני והתמקמות.</p><p><strong>לינה (15-20 ביולי):</strong> Avani Chaweng Samui. <span class="font-semibold text-orange-600">הזמנה בהמתנה.</span></p><p><strong>16-19 ביולי:</strong> ימי חופש. זמן חופשי לבטן-גב, קניות, ספורט ימי או טיפולי ספא.</p></div>
-                                   </div>
-                                   <div class="mt-6 pt-4 border-t border-gray-300 space-y-4">
-                                        <h4 class="font-bold text-lg">☀️ מזג אוויר ולבוש</h4>
-                                        <p>מזג האוויר בקוסמוי ביולי נחשב לטוב יחסית לשאר תאילנד. פחות גשום מפוקט, אך עדיין חם ולח (26-32 מעלות) עם אפשרות לממטרים קצרים. הבקרים לרוב שמשיים.</p>
-                                        <p><strong>לבוש מומלץ:</strong> דומה לפוקט - בגדים קצרים וקלילים, בגדי ים, והגנה מהשמש. כדאי גם צעיף קל או עליונית למקומות ממוזגים.</p>
-                                        <h4 class="font-bold text-lg mt-4">✡️ כשרות ובית חב"ד</h4>
-                                        <p><strong>בית חב"ד קוסמוי:</strong> ממוקם באזור חוף צ'אוונג. המקום מפעיל מסעדה בשרית ומסעדה חלבית/פיצרייה, ומספק שירותי דת וקהילה.</p>
-                                        <p><strong>כתובת:</strong> 39/8 Chaweng Beach Moo 3, Bophut.</p>
-                                        <h4 class="font-bold text-lg mt-4">💰 עלויות ונסיעות (הערכה)</h4>
-                                        <p><strong>אוכל כשר:</strong> עלויות דומות לפוקט, ארוחה בבית חב"ד כ-400-700 באט.</p>
-                                        <p><strong>נסיעות:</strong> מונית משדה"ת לצ'אוונג (כ-5 ק"מ) כ-400-600 באט. נסיעה למפלי נאמואנג (כ-18 ק"מ) תסוכם מראש.</p>
-                                        <h4 class="font-bold text-lg mt-4">🗺️ מפת הגעה</h4>
-                                        <a href="https://www.google.com/maps/search/?api=1&query=Combo+Beach+Club+Resort+Koh+Samui" target="_blank" class="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">פתח מפת הגעה למלון</a>
-                                   </div>
-                                </div>
-                            </div>
-                            <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🏙️ בנגקוק (20-23 יולי, 3 לילות)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                     <div class="border-r-2 border-[#D4A373] pr-4 space-y-4">
-                                        <p><strong>20 ביולי:</strong> טיסת צהריים מקוסמוי לבנגקוק (PG150) ב-15:20. נחיתה ב-16:50, התמקמות במלון וסיבוב קניות ראשון.</p>
-                                        <p><strong>לינה:</strong> Sindhorn Midtown Hotel Bangkok. <span class="font-semibold text-orange-600">ברשימת המתנה.</span></p>
-                                        <p><strong>21 ביולי:</strong> מקדשים וארמונות. ביקור בארמון המלך, וואט פו (הבודהה השוכב) וואט ארון.</p>
-                                        <p><strong>22 ביולי:</strong> שווקים. בוקר בשוק הצף דמנואן סדואק וערב בשוק הלילה פטפונג.</p>
-                                     </div>
-                                     <div class="mt-6 pt-4 border-t border-gray-300 space-y-4">
-                                        <h4 class="font-bold text-lg">☀️ מזג אוויר ולבוש</h4>
-                                        <p>בנגקוק ביולי חמה ולחה מאוד (26-33 מעלות), עם גשמי מונסון תכופים, לרוב בשעות אחר הצהריים והערב. העיר ממשיכה להיות שוקקת גם בגשם.</p>
-                                        <p><strong>לבוש מומלץ:</strong> בגדים קלים ונוחים להליכה. חשוב להצטייד בבגדים צנועים יותר לביקור במקדשים ובארמון המלך (כתפיים וברכיים מכוסות). נעליים נוחות הן חובה.</p>
-                                        <h4 class="font-bold text-lg mt-4">✡️ כשרות ובית חב"ד</h4>
-                                        <p><strong>בית חב"ד בנגקוק:</strong> המרכז הראשי נמצא ברחוב קוואסן. הוא מפעיל מסעדה בשרית גדולה, מאפייה, וחנות מוצרים כשרים. ישנן מסעדות כשרות נוספות בעיר, כולל חלביות.</p>
-                                        <p><strong>כתובת:</strong> 18 Phra Sumen Road, Chana Songkhram.</p>
-                                         <h4 class="font-bold text-lg mt-4">💰 עלויות ונסיעות (הערכה)</h4>
-                                        <p><strong>אוכל כשר:</strong> ארוחה בבית חב"ד כ-400-700 באט. ישנן אופציות נוספות ברחבי העיר.</p>
-                                        <p><strong>נסיעות:</strong> מונית משדה"ת לעיר (כ-35 ק"מ) כ-400-700 באט. נסיעה ברכבת עילית (BTS) לארמון המלך (כ-9 ק"מ) זולה משמעותית.</p>
-                                        <h4 class="font-bold text-lg mt-4">🗺️ מפת הגעה</h4>
-                                        <a href="https://www.google.com/maps/search/?api=1&query=Sindhorn+Midtown+Hotel+Bangkok" target="_blank" class="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">פתח מפת הגעה למלון</a>
-                                     </div>
-                                </div>
-                            </div>
-                            <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>✈️ חזרה הביתה (23 יולי)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5"><div class="border-r-2 border-[#D4A373] pr-4 space-y-4"><p><strong>23 ביולי:</strong> בוקר לקניות אחרונות בשוק פרטונם או קניוני סיאם. התארגנות וטיסה חזרה לתל אביב עם אל על (LY0084) ב-16:05. נחיתה בארץ ב-23:00.</p></div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="alternative-itinerary" class="tab-content">
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-2xl font-bold mb-4 text-center">מסלול טיול 2</h2>
-                         <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">
-                            מסלול זה מציע חלופה עם דגש מוגבר על חופים, אטרקציות ימיות, מרכזי קניות ובילויים פופולריים. הוא מיועד למי שרוצה למקסם את זמן הבטן-גב, השופינג והחוויות התוססות של תאילנד.
-                        </p>
-                        <div class="space-y-4">
-                            <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🏝️ פוקט: ים, שייט וקניות (6-11 יולי)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                    <div class="border-r-2 border-[#D4A373] pr-4 space-y-4">
-                                        <p><strong>6-7 ביולי:</strong> הגעה והתמקמות. יום למנוחה בחוף פטונג, ספורט ימי וסיור ראשוני באזור.</p>
-                                        <p><strong>8 ביולי:</strong> שייט למפרץ פאנג נה (האי של ג'יימס בונד), כולל שייט קיאקים במערות נסתרות.</p>
-                                        <p><strong>9 ביולי:</strong> יום חופים. ביקור בחופים הדרומיים והיפים יותר: קארון, קאטה וחוף פרידום המבודד.</p>
-                                        <p><strong>10 ביולי:</strong> יום שופינג. בילוי בקניון הענק Central Phuket ולאחר מכן חזרה לקניות ובילוי ערב בקניון ג'ונגסיילון בפטונג.</p>
-                                    </div>
-                                    <div class="mt-6 pt-4 border-t border-gray-300 space-y-4">
-                                        <h4 class="font-bold text-lg">☀️ מזג אוויר ולבוש</h4>
-                                        <p>יולי בפוקט הוא חלק מעונת המונסונים. צפו למזג אוויר חם (סביב 25-31 מעלות) ולח, עם סיכוי גבוה לממטרים חזקים וקצרים, בעיקר אחה"צ. השמש מופיעה לרוב בין הגשמים.</p>
-                                        <p><strong>לבוש מומלץ:</strong> בגדים קצרים וקלילים מבדים נושמים, בגדי ים, כובע, משקפי שמש, סנדלים ומעיל גשם דק.</p>
-                                        <h4 class="font-bold text-lg mt-4">✡️ כשרות ובית חב"ד</h4>
-                                        <p><strong>בית חב"ד פוקט:</strong> ממוקם בלב פטונג ומציע מסעדה בשרית ופיצרייה חלבית.</p>
-                                        <p><strong>כתובת:</strong> 9/6 Rat-U-Thit 200 Pee Road, Patong.</p>
-                                        <h4 class="font-bold text-lg mt-4">💰 עלויות ונסיעות (הערכה)</h4>
-                                        <p><strong>אוכל כשר:</strong> ארוחה בבית חב"ד כ-400-700 באט לאדם.</p>
-                                        <p><strong>נסיעות:</strong> מונית משדה"ת לפטונג (כ-40 ק"מ) כ-800-1,200 באט. נסיעה למפרץ פאנג נה (כ-40 ק"מ למזח) היא חלק מטיול מאורגן.</p>
-                                        <h4 class="font-bold text-lg mt-4">🗺️ מפת הגעה</h4>
-                                        <a href="https://www.google.com/maps/search/?api=1&query=Hotel+Indigo+Phuket+Patong" target="_blank" class="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">פתח מפת הגעה למלון</a>
-                                     </div>
-                                </div>
-                            </div>
-                             <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🥥 קוסמוי: גן עדן טרופי (11-20 יולי)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                    <div class="border-r-2 border-[#D4A373] pr-4 space-y-6">
-                                        <p><strong>11-12 ביולי:</strong> הגעה והתמקמות בחוף צ'אוונג. ימי מנוחה, בטן-גב וספורט ימי.</p>
-                                        <p><strong>13 ביולי:</strong> טיול יום לאיים קו טאו וקו נאנג יואן, הנחשבים לגן עדן לשנורקלינג וצלילה.</p>
-                                        <p><strong>14 ביולי:</strong> שייט וטיול בפארק הלאומי אנג ת'ונג.</p>
-                                        <p><strong>15 ביולי:</strong> יום שופינג בקניון סנטרל סמוי ובילוי ערב בכפר הדייגים הציורי בבופוט.</p>
-                                        <p><strong>16-19 ביולי:</strong> ימים גמישים. אפשרות לשכור רכב/קטנוע ולגלות חופים נסתרים, לבקר בנקודות תצפית (Lamai Viewpoint) או פשוט להירגע במלון.</p>
-                                    </div>
-                                    <div class="mt-6 pt-4 border-t border-gray-300 space-y-4">
-                                        <h4 class="font-bold text-lg">☀️ מזג אוויר ולבוש</h4>
-                                        <p>מזג האוויר בקוסמוי ביולי נחשב לטוב יחסית. פחות גשום מפוקט, אך עדיין חם ולח (26-32 מעלות) עם אפשרות לממטרים קצרים.</p>
-                                        <p><strong>לבוש מומלץ:</strong> בגדים קצרים וקלילים, בגדי ים, והגנה מהשמש. כדאי גם צעיף קל למקומות ממוזגים.</p>
-                                        <h4 class="font-bold text-lg mt-4">✡️ כשרות ובית חב"ד</h4>
-                                        <p><strong>בית חב"ד קוסמוי:</strong> ממוקם באזור חוף צ'אוונג ומפעיל מסעדה בשרית וחלבית.</p>
-                                        <p><strong>כתובת:</strong> 39/8 Chaweng Beach Moo 3, Bophut.</p>
-                                        <h4 class="font-bold text-lg mt-4">💰 עלויות ונסיעות (הערכה)</h4>
-                                        <p><strong>אוכל כשר:</strong> עלויות דומות לפוקט, ארוחה בבית חב"ד כ-400-700 באט.</p>
-                                        <p><strong>נסיעות:</strong> מונית משדה"ת לצ'אוונג (כ-5 ק"מ) כ-400-600 באט. נסיעה לכפר הדייגים (כ-8 ק"מ) תסוכם מראש.</p>
-                                        <h4 class="font-bold text-lg mt-4">🗺️ מפת הגעה</h4>
-                                        <a href="https://www.google.com/maps/search/?api=1&query=Combo+Beach+Club+Resort+Koh+Samui" target="_blank" class="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">פתח מפת הגעה למלון</a>
-                                   </div>
-                                </div>
-                            </div>
-                            <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🏙️ בנגקוק: עיר הקניות והבילויים (20-23 יולי)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                    <div class="border-r-2 border-[#D4A373] pr-4 space-y-4">
-                                        <p><strong>20 ביולי:</strong> הגעה והתמקמות. בערב, ביקור באחד הקניונים הגדולים (Siam Paragon או CentralWorld) לארוחת ערב ושופינג.</p>
-                                        <p><strong>21 ביולי:</strong> בבוקר, שייט בתעלות המים (קלונגים) של תונבורי. בערב, בילוי במתחם Asiatique The Riverfront על גדת הנהר.</p>
-                                        <p><strong>22 ביולי:</strong> יום שופינג מרוכז. שוק סוף השבוע צ'אטוצ'אק (אם חל סופ"ש) או קניון MBK ופלטינום. בערב, עלייה לבר על גג (Rooftop Bar) לתצפית על העיר.</p>
-                                        <p><strong>23 ביולי:</strong> קניות אחרונות וטיסה חזרה.</p>
-                                    </div>
-                                    <div class="mt-6 pt-4 border-t border-gray-300 space-y-4">
-                                        <h4 class="font-bold text-lg">☀️ מזג אוויר ולבוש</h4>
-                                        <p>בנגקוק ביולי חמה ולחה מאוד (26-33 מעלות), עם גשמי מונסון תכופים. לבוש קל ונוח הוא חובה.</p>
-                                        <p><strong>לבוש מומלץ:</strong> בגדים קלים ונוחים להליכה. נעליים נוחות הן חובה.</p>
-                                        <h4 class="font-bold text-lg mt-4">✡️ כשרות ובית חב"ד</h4>
-                                        <p><strong>בית חב"ד בנגקוק:</strong> המרכז הראשי ברחוב קוואסן מפעיל מסעדה, מאפייה וחנות.</p>
-                                        <p><strong>כתובת:</strong> 18 Phra Sumen Road, Chana Songkhram.</p>
-                                         <h4 class="font-bold text-lg mt-4">💰 עלויות ונסיעות (הערכה)</h4>
-                                        <p><strong>אוכל כשר:</strong> ארוחה בבית חב"ד כ-400-700 באט.</p>
-                                        <p><strong>נסיעות:</strong> מונית משדה"ת לעיר (כ-35 ק"מ) כ-400-700 באט. נסיעה ב-BTS לקניונים המרכזיים (כ-4 ק"מ) זולה ומהירה.</p>
-                                        <h4 class="font-bold text-lg mt-4">🗺️ מפת הגעה</h4>
-                                        <a href="https://www.google.com/maps/search/?api=1&query=Sindhorn+Midtown+Hotel+Bangkok" target="_blank" class="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">פתח מפת הגעה למלון</a>
-                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="itinerary-3" class="tab-content">
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-2xl font-bold mb-4 text-center">מסלול טיול 3: טבע והרפתקאות</h2>
-                         <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">
-                            מסלול זה מתמקד בחוויות טבע ייחודיות, כולל ביקור בפארק הלאומי קאו סוק המרהיב, לצד תרבות מקומית וזמן איכות בחופים.
-                        </p>
-                        <div class="space-y-4">
-                            <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🏞️ פוקט וקאו סוק (6-13 ביולי)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                    <div class="border-r-2 border-[#D4A373] pr-4 space-y-4">
-                                        <p><strong>6-7 ביולי:</strong> הגעה לפוקט והתמקמות. מנוחה בחוף נאי הארן השקט והיפהפה.</p>
-                                        <p><strong>8 ביולי:</strong> ביקור בשמורת פילים אתית (Elephant Jungle Sanctuary) לחוויה בלתי נשכחת.</p>
-                                        <p><strong>9 ביולי:</strong> נסיעה לפארק הלאומי קאו סוק (כ-160 ק"מ מפוקט). צ'ק-אין בבקתת עץ בג'ונגל.</p>
-                                        <p><strong>10-11 ביולי:</strong> טיול לאגם צ'או לאן, לינה בבקתה צפה על המים, שייט קיאקים וטיולי ג'ונגל.</p>
-                                        <p><strong>12 ביולי:</strong> בוקר על האגם, חזרה מהשמורה ונסיעה למזח בסוראט תאני למעבורת לקוסמוי.</p>
-                                    </div>
-                                     <div class="mt-6 pt-4 border-t border-gray-300 space-y-4">
-                                        <h4 class="font-bold text-lg">☀️ מזג אוויר ולבוש</h4>
-                                        <p>בקאו סוק מזג האוויר טרופי ולח, עם סיכוי גבוה לגשם. יש להצטייד בבגדים מתייבשים מהר, נעלי הליכה טובות, בגד ים, וכיסוי נגד גשם.</p>
-                                        <h4 class="font-bold text-lg mt-4">✡️ כשרות</h4>
-                                        <p><strong>בקאו סוק אין אוכל כשר זמין.</strong> יש להיערך מראש עם אוכל ארוז מהבית או מבית חב"ד בפוקט לפני היציאה.</p>
-                                        <h4 class="font-bold text-lg mt-4">💰 עלויות ונסיעות (הערכה)</h4>
-                                        <p><strong>נסיעות:</strong> הסעה פרטית מפוקט לקאו סוק כ-2,500-3,500 באט. טיול מאורגן לקאו סוק כולל לינה והסעות יעלה יותר.</p>
-                                        <h4 class="font-bold text-lg mt-4">🗺️ מפת הגעה</h4>
-                                        <a href="https://www.google.com/maps/search/?api=1&query=Khao+Sok+National+Park" target="_blank" class="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">פתח מפת הגעה לקאו סוק</a>
-                                     </div>
-                                </div>
-                            </div>
-                             <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🥥 קוסמוי (13-20 יולי)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                    <div class="border-r-2 border-[#D4A373] pr-4 space-y-6">
-                                        <p><strong>13-14 ביולי:</strong> הגעה לקוסמוי, התמקמות וימי מנוחה בחוף שקט כמו מאה נאם או בופוט.</p>
-                                        <p><strong>15 ביולי:</strong> טיול פנים האי: ביקור בגן הבודהה הסודי (Secret Buddha Garden) ונקודות תצפית.</p>
-                                        <p><strong>16 ביולי:</strong> טיול יום לפארק הלאומי אנג ת'ונג.</p>
-                                        <p><strong>17-19 ביולי:</strong> ימים חופשיים לחקור את האי, קורס בישול, או טיפולי ספא.</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="accordion-item bg-[#F9F4EE] rounded-xl">
-                                <button class="accordion-button w-full flex justify-between items-center p-5 text-xl font-semibold text-right"><span>🏙️ בנגקוק (20-23 יולי)</span><span class="accordion-arrow transition-transform duration-300">▼</span></button>
-                                <div class="accordion-content px-5 pb-5">
-                                    <div class="border-r-2 border-[#D4A373] pr-4 space-y-4">
-                                        <p><strong>20 ביולי:</strong> טיסה מקוסמוי לבנגקוק. בערב, סיור אופניים לילי בעיר העתיקה.</p>
-                                        <p><strong>21 ביולי:</strong> יום תרבות: ארמון המלך, וואט פו, וואט ארון.</p>
-                                        <p><strong>22 ביולי:</strong> ביקור ב"ריאה הירוקה" של בנגקוק - האי בנג קראצ'או, וטיול אופניים בין הכפרים והשדות.</p>
-                                        <p><strong>23 ביולי:</strong> קניות אחרונות וטיסה חזרה הביתה.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="logistics" class="tab-content">
-                     <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-2xl font-bold mb-4 text-center">מידע לוגיסטי: טיסות ולינה</h2>
-                         <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">
-                            לנוחיותכם, כל פרטי הטיסות והמלונות רוכזו כאן. תוכלו לראות בבירור את כל מספרי הטיסות, זמני ההמראה והנחיתה, וסטטוס ההזמנה העדכני של כל מלון. שימו לב לסטטוסים הצבעוניים: ירוק לאישור סופי וכתום להזמנות שעדיין ממתינות.
-                        </p>
-                        <div class="space-y-6">
-                            <div>
-                                <h3 class="text-xl font-semibold mb-3 border-b-2 border-[#D4A373] pb-2">טיסות</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="bg-gray-50 p-4 rounded-lg"><strong>ת"א ← בנגקוק:</strong> 5.7, 23:30, אל על LY0081</div>
-                                    <div class="bg-gray-50 p-4 rounded-lg"><strong>בנגקוק ← פוקט:</strong> 6.7, 17:00, בנגקוק איירווייז PG0277</div>
-                                    <div class="bg-gray-50 p-4 rounded-lg"><strong>פוקט ← קוסמוי:</strong> 11.7, 11:00, בנגקוק איירווייז PG250</div>
-                                    <div class="bg-gray-50 p-4 rounded-lg"><strong>קוסמוי ← בנגקוק:</strong> 20.7, 15:20, בנגקוק איירווייז PG150</div>
-                                    <div class="bg-gray-50 p-4 rounded-lg col-span-1 md:col-span-2"><strong>בנגקוק ← ת"א:</strong> 23.7, 16:05, אל על LY0084</div>
-                                </div>
-                            </div>
-                            <div>
-                                <h3 class="text-xl font-semibold mb-3 border-b-2 border-[#D4A373] pb-2">מלונות</h3>
-                                <div class="space-y-4">
-                                    <div class="bg-gray-50 p-4 rounded-lg"><p class="font-bold">פוקט (6-11 יולי): Hotel Indigo Phuket Patong</p><p>סטטוס: <span class="font-bold p-1 rounded bg-green-100 text-green-800">מאושרת</span></p><p>פרטים: 4 חדרים Standard City View עם א.בוקר ו-2 מיטות נוספות.</p></div>
-                                    <div class="bg-gray-50 p-4 rounded-lg"><p class="font-bold">קוסמוי (11-15 יולי): Combo Beach Club & Resort</p><p>סטטוס: <span class="font-bold p-1 rounded bg-orange-100 text-orange-800">בהמתנה</span></p><p>פרטים: 4 חדרים Deluxe עם א.בוקר ו-2 מיטות נוספות.</p></div>
-                                    <div class="bg-gray-50 p-4 rounded-lg"><p class="font-bold">קוסמוי (15-20 יולי): Avani Chaweng Samui</p><p>סטטוס: <span class="font-bold p-1 rounded bg-orange-100 text-orange-800">בהמתנה</span></p><p>פרטים: 2 חדרי Cool Pool View, 2 חדרי Funky poolside עם 2 מיטות נוספות.</p></div>
-                                    <div class="bg-gray-50 p-4 rounded-lg"><p class="font-bold">בנגקוק (20-23 יולי): Sindhorn Midtown Hotel</p><p>סטטוס: <span class="font-bold p-1 rounded bg-orange-100 text-orange-800">רשימת המתנה</span></p><p>פרטים: 4 חדרים סטנדרטיים עם א.בוקר ו-2 מיטות נוספות.</p></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="travelers" class="tab-content">
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-2xl font-bold mb-4 text-center">משתתפי הטיול</h2>
-                         <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">
-                            הכירו את קבוצת המטיילים! כאן מופיעה רשימת כל המשתתפים בטיול, מחולקת לפי שמות ההורים והילדים בכל משפחה.
-                        </p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                            <div class="bg-gray-50 p-5 rounded-lg"><h3 class="text-xl font-semibold mb-3 text-[#D4A373]">משפחת ראש (6)</h3><div class="space-y-2"><p><strong>הורים:</strong> מיכל, אפרת</p><p><strong>ילדים:</strong> יאיר, אהוד, שמחה, יצחק נסים</p></div></div>
-                            <div class="bg-gray-50 p-5 rounded-lg"><h3 class="text-xl font-semibold mb-3 text-[#D4A373]">משפחת ביטן (4)</h3><div class="space-y-2"><p><strong>הורים:</strong> שמעון, אסנת</p><p><strong>ילדים:</strong> איתי, נועם יהונתן</p></div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="map" class="tab-content">
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-2xl font-bold mb-6 text-center">מפה וגלריה (מסלול 1)</h2>
-                        <div id="map_container_1" class="w-full mb-8">
-                            <h3 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">מפה תלת-מימדית</h3>
-                            <div id="map_3d_1" class="map-3d-container"></div>
-                        </div>
-                        <div id="map-container" class="w-full mb-8">
-                            <h3 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">מפה אינטראקטיבית</h3>
-                            <div id="interactive_map" class="w-full h-[400px] md:h-[500px] rounded-2xl z-0"></div>
-                        </div>
-                        <div class="text-center mb-10">
-                            <button id="downloadKml" class="bg-[#D4A373] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#b88a5a] transition-colors duration-300 shadow-md">
-                                🌍 הורדת מסלול 1 ל-Google Earth
-                            </button>
-                        </div>
-                        <div class="mt-12">
-                            <h3 class="text-2xl font-semibold mt-10 mb-4 text-center">גלריית תמונות</h3>
-                            <h4 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">מלונות</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://lh3.googleusercontent.com/p/AF1QipM5-V_M7-yOujzV3FpB_wA-JgQjA_Jz_Zz-zQ=s1360-w1360-h1020" alt="Hotel Indigo Phuket Patong" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/334257/FFFFFF?text=Hotel+Indigo';"><div class="p-4"><h3 class="font-semibold">Hotel Indigo, פוקט</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://lh3.googleusercontent.com/p/AF1QipN9yX8Y8Z8_8_8_8_8_8_8_8_8_8_8_8_8=s1360-w1360-h1020" alt="Combo Beach Club, קוסמוי" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/548CA8/FFFFFF?text=Combo+Beach';"><div class="p-4"><h3 class="font-semibold">Combo Beach Club, קוסמוי</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://lh3.googleusercontent.com/p/AF1QipP_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8=s1360-w1360-h1020" alt="Avani Chaweng, קוסמוי" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/95D1CC/FFFFFF?text=Avani+Chaweng';"><div class="p-4"><h3 class="font-semibold">Avani Chaweng, קוסמוי</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://lh3.googleusercontent.com/p/AF1QipO_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8=s1360-w1360-h1020" alt="Sindhorn Midtown, בנגקוק" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/476072/FFFFFF?text=Sindhorn+Midtown';"><div class="p-4"><h3 class="font-semibold">Sindhorn Midtown, בנגקוק</h3></div></div>
-                            </div>
-                            <h4 class="text-xl font-semibold mt-10 mb-3 text-center text-gray-700">אטרקציות ונופים</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1511634271513-65940715101a?q=80&w=2070&auto=format&fit=crop" alt="איי פי פי" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/548CA8/FFFFFF?text=%D7%90%D7%99%D7%99%2B%D7%A4%D7%99%2B%D7%A4%D7%99';"><div class="p-4"><h3 class="font-semibold">איי פי פי</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1621523392337-40e584f27508?q=80&w=1974&auto=format&fit=crop" alt="הבודהה הגדול, פוקט" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/95D1CC/FFFFFF?text=%D7%94%D7%91%D7%95%D7%93%D7%94%D7%94%2B%D7%94%D7%92%D7%93%D7%95%D7%9C';"><div class="p-4"><h3 class="font-semibold">הבודהה הגדול, פוקט</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1589492159497-8d234a43f333?q=80&w=2070&auto=format&fit=crop" alt="הפארק הלאומי הימי אנג ת'ונג" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/476072/FFFFFF?text=%D7%A4%D7%90%D7%A8%D7%A7%2B%D7%99%D7%9E%D7%99';"><div class="p-4"><h3 class="font-semibold">הפארק הימי אנג ת'ונג</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1540202404-1b335943548a?q=80&w=2070&auto=format&fit=crop" alt="חוף צ'אוונג, קוסמוי" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/FFC996/FFFFFF?text=%D7%97%D7%95%D7%A3%2B%D7%A6%27%D7%90%D7%95%D7%95%D7%A0%D7%92';"><div class="p-4"><h3 class="font-semibold">חוף צ'אוונג, קוסמוי</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1508050242735-e33343431a47?q=80&w=2070&auto=format&fit=crop" alt="ארמון המלך, בנגקוק" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/F2BED1/FFFFFF?text=%D7%90%D7%A8%D7%9E%D7%95%D7%9F%2B%D7%94%D7%9E%D7%9C%D7%9A';"><div class="p-4"><h3 class="font-semibold">ארמון המלך, בנגקוק</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1563492065599-DC4526494544?q=80&w=1974&auto=format&fit=crop" alt="וואט ארון, בנגקוק" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/CDA2AB/FFFFFF?text=%D7%95%D7%95%D7%90%D7%98%2B%D7%90%D7%A8%D7%95%D7%9F';"><div class="p-4"><h3 class="font-semibold">וואט ארון, בנגקוק</h3></div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                 <div id="map-alternative" class="tab-content">
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-2xl font-bold mb-6 text-center">מפה וגלריה (מסלול 2)</h2>
-                        <div id="alternative_map_3d_container" class="w-full mb-8">
-                            <h3 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">מפה תלת-מימדית</h3>
-                            <div id="map_3d_2" class="map-3d-container"></div>
-                        </div>
-                        <div id="alternative_map_container" class="w-full mb-8">
-                            <h3 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">מפה אינטראקטיבית</h3>
-                            <div id="alternative_interactive_map" class="w-full h-[400px] md:h-[500px] rounded-2xl z-0"></div>
-                        </div>
-                         <div class="text-center mb-10">
-                            <button id="downloadKmlAlternative" class="bg-[#D4A373] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#b88a5a] transition-colors duration-300 shadow-md">
-                                🌍 הורדת מסלול 2 ל-Google Earth
-                            </button>
-                        </div>
-                        <div class="mt-12">
-                            <h3 class="text-2xl font-semibold mt-10 mb-4 text-center">גלריית תמונות (מסלול 2)</h3>
-                            <h4 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">מלונות</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://lh3.googleusercontent.com/p/AF1QipM5-V_M7-yOujzV3FpB_wA-JgQjA_Jz_Zz-zQ=s1360-w1360-h1020" alt="Hotel Indigo Phuket Patong" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/334257/FFFFFF?text=Hotel+Indigo';"><div class="p-4"><h3 class="font-semibold">Hotel Indigo, פוקט</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://lh3.googleusercontent.com/p/AF1QipN9yX8Y8Z8_8_8_8_8_8_8_8_8_8_8_8_8=s1360-w1360-h1020" alt="Combo Beach Club, קוסמוי" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/548CA8/FFFFFF?text=Combo+Beach';"><div class="p-4"><h3 class="font-semibold">Combo Beach Club, קוסמוי</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://lh3.googleusercontent.com/p/AF1QipP_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8=s1360-w1360-h1020" alt="Avani Chaweng, קוסמוי" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/95D1CC/FFFFFF?text=Avani+Chaweng';"><div class="p-4"><h3 class="font-semibold">Avani Chaweng, קוסמוי</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://lh3.googleusercontent.com/p/AF1QipO_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8=s1360-w1360-h1020" alt="Sindhorn Midtown, בנגקוק" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/476072/FFFFFF?text=Sindhorn+Midtown';"><div class="p-4"><h3 class="font-semibold">Sindhorn Midtown, בנגקוק</h3></div></div>
-                            </div>
-                            <h4 class="text-xl font-semibold mt-10 mb-3 text-center text-gray-700">אטרקציות ונופים (חלופי)</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1596201530934-21612117883f?q=80&w=2070&auto=format&fit=crop" alt="מפרץ פאנג נה" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/0077b6/FFFFFF?text=%D7%9E%D7%A4%D7%A8%D7%A5+%D7%A4%D7%90%D7%A0%D7%92+%D7%A0%D7%94';"><div class="p-4"><h3 class="font-semibold">מפרץ פאנג נה</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1588665519357-d6c55a6a9987?q=80&w=2070&auto=format&fit=crop" alt="קו טאו" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/00b4d8/FFFFFF?text=%D7%A7%D7%95+%D7%98%D7%90%D7%95';"><div class="p-4"><h3 class="font-semibold">קו טאו</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1559599348-915c71ea4e3c?q=80&w=2070&auto=format&fit=crop" alt="Asiatique The Riverfront" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/90e0ef/FFFFFF?text=Asiatique';"><div class="p-4"><h3 class="font-semibold">Asiatique The Riverfront</h3></div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="map-itinerary-3" class="tab-content">
-                     <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-sm">
-                        <h2 class="text-2xl font-bold mb-6 text-center">מפה וגלריה (מסלול 3)</h2>
-                        <div id="itinerary3_map_3d_container" class="w-full mb-8">
-                            <h3 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">מפה תלת-מימדית</h3>
-                            <div id="map_3d_3" class="map-3d-container"></div>
-                        </div>
-                        <div id="itinerary3_map_container" class="w-full mb-8">
-                            <h3 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">מפה אינטראקטיבית</h3>
-                            <div id="itinerary3_interactive_map" class="w-full h-[400px] md:h-[500px] rounded-2xl z-0"></div>
-                        </div>
-                         <div class="text-center mb-10">
-                            <button id="downloadKml3" class="bg-[#D4A373] text-white font-bold py-3 px-6 rounded-lg hover:bg-[#b88a5a] transition-colors duration-300 shadow-md">
-                                🌍 הורדת מסלול 3 ל-Google Earth
-                            </button>
-                        </div>
-                        <div class="mt-12">
-                            <h3 class="text-2xl font-semibold mt-10 mb-4 text-center">גלריית תמונות (מסלול 3)</h3>
-                            <h4 class="text-xl font-semibold mt-6 mb-3 text-center text-gray-700">אטרקציות ונופים</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1573336043833-b120993a4353?q=80&w=2070&auto=format&fit=crop" alt="הפארק הלאומי קאו סוק" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/2a9d8f/FFFFFF?text=%D7%A7%D7%90%D7%95+%D7%A1%D7%95%D7%A7';"><div class="p-4"><h3 class="font-semibold">הפארק הלאומי קאו סוק</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1610398939339-1a0c7cf4b318?q=80&w=1974&auto=format&fit=crop" alt="שמורת פילים" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/e9c46a/FFFFFF?text=%D7%A9%D7%9E%D7%95%D7%A8%D7%AA+%D7%A4%D7%99%D7%9C%D7%99%D7%9D';"><div class="p-4"><h3 class="font-semibold">שמורת פילים</h3></div></div>
-                                <div class="gallery-item bg-white rounded-lg overflow-hidden shadow-sm"><img src="https://images.unsplash.com/photo-1604928141068-4756a4e036d1?q=80&w=2070&auto=format&fit=crop" alt="אגם צ'או לאן" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f4a261/FFFFFF?text=%D7%90%D7%92%D7%9D+%D7%A6%27%D7%90%D7%95+%D7%9C%D7%90%D7%9F';"><div class="p-4"><h3 class="font-semibold">אגם צ'או לאן</h3></div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </main>
-        </div>
+            <!-- Content sections for each destination -->
+            <div id="phuket-content" class="tab-content hidden"></div>
+            <div id="samui-content" class="tab-content hidden"></div>
+            <div id="bangkok-content" class="tab-content hidden"></div>
+        </main>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const initialChoiceDiv = document.getElementById('initial-choice');
-            const planContentDiv = document.getElementById('plan-content');
-            const splashScreen = document.getElementById('splash-screen');
-            const startPlanningBtn = document.getElementById('start-planning-btn');
-            const animatedTextDiv = document.getElementById('animated-text');
-            const splashTitle = document.getElementById('splash-title');
-            const choice1 = document.getElementById('choice-1');
-            const choice2 = document.getElementById('choice-2');
-            const choice3 = document.getElementById('choice-3');
-            const backButton = document.getElementById('back-to-choice');
-            const mainNav = document.getElementById('main-nav');
-            
-            let mainMap, altMap, itinerary3Map;
-            let mainMapInitialized = false;
-            let altMapInitialized = false;
-            let itinerary3MapInitialized = false;
-            let overviewChart;
-            
-            let threeJsInstances = {};
-
-            const splashMessages = [
-                "בשונה ממנהגנו בקודש...",
-                "הוחלט לארגן טיול עם לוחות זמנים מסודרים (שהפעם גם נעמוד בהם)...",
-                "וזאת על מנת לנצל את מלוא הזמן להנות מהטיול...",
-                "לשם כך הנכם מתבקשים להפסיק לרבוץ על הספה...",
-                "להתנתק מהאח הגדול, מכשירי הסלולר והרשתות החברתיות...",
-                "ולהנות מהטיול!",
-                "שיהיה טיול מהנה לכולם!",
-                "חלוקת תפקידים:",
-                "איציק :רס\"ר משמעת ואחראי עמידה בלוחות זמנים",
-                "שמחה: רס\"ר מטבח",
-                "אסנת: סו שף",
-                "איתי אפרת ויאיר: הרמת שאריות חטיפים ובגדים זרוקים מרצפת החדר במלון",
-                "נועם: אחראי מחשוב",
-                "מיכל :גננת ורכזת פעילות של איתי אפרת ויאיר",
-                "שמעון : צוות בידור"
-            ];
-
-            let messageIndex = 0;
-            function showNextMessage() {
-                if (messageIndex < splashMessages.length) {
-                    const p = document.createElement('p');
-                    p.textContent = splashMessages[messageIndex];
-                    p.className = 'opacity-0';
-                    animatedTextDiv.innerHTML = '';
-                    animatedTextDiv.appendChild(p);
-                    setTimeout(() => p.classList.remove('opacity-0'), 100);
-                    
-                    messageIndex++;
-                    setTimeout(showNextMessage, 5000);
-                } else {
-                    startPlanningBtn.classList.remove('opacity-0');
-                }
+        const tripData = {
+            phuket: {
+                title: "פוקט: אי של חופים והרפתקאות",
+                duration: "5-11 יולי (6 לילות)",
+                hotel: "Hotel Indigo Phuket Patong, an IHG Hotel",
+                weather: {
+                    title: "תחזית מזג אוויר לפוקט",
+                    details: "מזג האוויר יכול להיות הפכפך. צפויים ימים עם שמש, אך גם ממטרים טרופיים חזקים וקצרים, בעיקר אחר הצהריים והערב. הים עלול להיות גלי. טמפרטורה ממוצעת: 25-31 מעלות צלזיוס."
+                },
+                kosher: {
+                    name: "בית חב\"ד ומסעדות כשרות",
+                    details: [
+                        "<strong>בית חב\"ד פוקט:</strong> ממוקם במרכז פטונג, קרוב למלון. מציע ארוחות שבת, מסעדה בשרית ופיצרייה חלבית.",
+                        "<strong>מסעדת \"הבית השחור\" (כשר למהדרין):</strong> מסעדה נוספת באזור פטונג."
+                    ]
+                },
+                days: [
+                    {
+                        date: "5 ביולי: יציאה מישראל",
+                        title: "טיסת לילה מתל אביב לבנגקוק",
+                        description: "ההרפתקה מתחילה! הגעה לנמל התעופה בן גוריון (TLV) והמראה בטיסת לילה (אל על LY0081) לבנגקוק (BKK).",
+                        cost: "כלול במחיר הטיסה.",
+                        clothing: "בגדים נוחים לטיסה ארוכה, משהו חם למטוס.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/place?key=API_KEY_PLACEHOLDER&q=Ben+Gurion+Airport, נמל התעופה בן גוריון"
+                    },
+                    {
+                        date: "6 ביולי: הגעה לתאילנד והתארגנות",
+                        title: "נחיתה, טיסת המשך והגעה למלון",
+                        description: "נחיתה בבנגקוק (BKK) בשעה 15:10, מעבר לטיסת המשך לפוקט (HKT) עם בנגקוק איירווייז (PG0277) ב-17:00. נחיתה בפוקט ב-18:30 ונסיעה למלון.",
+                        cost: "מונית משדה התעופה למלון: 600-800 באט.",
+                        clothing: "בגדים קלים ונוחים להגעה והתארגנות.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Phuket+International+Airport, נמל התעופה של פוקט&destination=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט"
+                    },
+                    {
+                        date: "7 ביולי: יום התאקלמות",
+                        title: "מנוחה, בריכה וחוף פטונג",
+                        description: "יום רגוע להתאקלמות. בילוי בבריכת המלון המרשימה והיכרות עם אזור חוף פטונג התוסס ומרכז הקניות ג'ונגסיילון.",
+                        cost: "הליכה רגלית, אין צורך בנסיעה.",
+                        clothing: "בגד ים, בגדים קצרים וקלילים לחוף ולבריכה.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Patong+Beach, חוף פטונג"
+                    },
+                    {
+                        date: "8 ביולי: טיול יום לאיי פיפי",
+                        title: "שנורקלינג וחופים מרהיבים",
+                        description: "שייט לאיי פיפי ו\"מאיה ביי\" המפורסם. הטיול כולל שנורקלינג, ביקור בחופים מרהיבים וארוחת צהריים. מוזמן מראש דרך סוכנות מקומית או בית חב\"ד. היציאה בדרך כלל מרציף Rassada.",
+                        cost: "1,500-3,000 באט לאדם. האיסוף מהמלון כלול במחיר.",
+                        clothing: "בגד ים, בגדים קלילים שמתייבשים מהר, כובע ומשקפי שמש.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Rassada+Pier,+Phuket, רציף ראסאדה"
+                    },
+                    {
+                        date: "9 ביולי: תרבות ונופים",
+                        title: "הבודהה הגדול והעיר העתיקה",
+                        description: "ביקור ב\"בודהה הגדול\" לתצפית פנורמית מרהיבה על האי, ומשם סיור בעיר העתיקה של פוקט עם הארכיטקטורה הסינו-פורטוגזית הצבעונית.",
+                        cost: "מונית/Grab ליום סיור: כ-1,000-1,500 באט.",
+                        clothing: "קוד לבוש חובה לבודהה הגדול: חולצה עם שרוולים ומכנסיים/חצאית המכסים את הברכיים.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Big+Buddha,+Phuket, הבודהה הגדול&waypoints=Phuket+Old+Town, העיר העתיקה של פוקט"
+                    },
+                    {
+                        date: "10 ביולי: יום כיף ואטרקציות",
+                        title: "פארק מים, פילים או חבלים",
+                        description: "בחירה בין שלוש אטרקציות מובילות: פארק המים החדש Andamanda, חוות פילים אתית כמו Elephant Jungle Sanctuary, או פארק החבלים Hanuman World.",
+                        cost: "כניסה: 1,500-2,500 באט לאדם. נסיעה: 400-800 באט לכיוון.",
+                        clothing: "בגד ים ובגדים להחלפה.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Andamanda+Phuket, פארק המים אנדמנדה"
+                    },
+                     {
+                        date: "11 ביולי: טיסה לקוסמוי",
+                        title: "פרידה מפוקט ומעבר לאי השכן",
+                        description: "טיסת בוקר מפוקט (HKT) לקוסמוי (USM) עם בנגקוק איירווייז (PG250).",
+                        cost: "עלות טיסה.",
+                        clothing: "בגדים נוחים לטיסה.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Phuket+International+Airport, נמל התעופה של פוקט"
+                    }
+                ]
+            },
+            samui: {
+                title: "קוסמוי: גן עדן טרופי",
+                duration: "11-20 יולי (9 לילות)",
+                hotel: "Combo Beach Hotel (11-15/7) | Avani Chaweng (15-20/7)",
+                weather: {
+                    title: "תחזית מזג אוויר לקוסמוי",
+                    details: "נחשבת לטובה יותר מפוקט ביולי. יש פחות ימי גשם בממוצע, והגשם שיורד הוא לרוב קצר ומרוכז. רוב היום שמשי ונעים. טמפרטורה ממוצעת: 26-32 מעלות צלזיוס."
+                },
+                 kosher: {
+                    name: "בית חב\"ד ומסעדות כשרות",
+                    details: [
+                        "<strong>בית חב\"ד קוסמוי:</strong> ממוקם במרכז חוף צ'אוונג. מפעיל מסעדה בשרית, חלבית, מאפיה וחנות מצרכים כשרה."
+                    ]
+                },
+                days: [
+                    {
+                        date: "11 ביולי: הגעה לקוסמוי",
+                        title: "נחיתה והתמקמות במלון Combo",
+                        description: "טיסת בוקר מפוקט. נחיתה בשדה התעופה המקסים של קוסמוי ונסיעה למלון Combo Beach Hotel בחוף צ'אוונג.",
+                        cost: "מיניבוס: 150 באט לאדם, מונית: 500-700 באט.",
+                        clothing: "בגדים קלים ונוחים לנחיתה והתמקמות.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Samui+International+Airport, נמל התעופה של קוסמוי&destination=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'"
+                    },
+                    {
+                        date: "12 ביולי: הפארק הימי אנג ת'ונג",
+                        title: "שייט, קיאקים ו\"אגם האזמרגד\"",
+                        description: "טיול יום מאורגן לפארק הלאומי הימי אנג ת'ונג. הטיול כולל שייט בין 42 איים, קיאקים, שנורקלינג ותצפית מרהיבה על \"אגם האזמרגד\".",
+                        cost: "1,800-2,800 באט לאדם. האיסוף מהמלון כלול.",
+                        clothing: "בגד ים, בגדים נוחים להליכה, נעליים למים וכובע.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'&destination=Nathon+Pier,+Koh+Samui, רציף נאת'ון"
+                    },
+                    {
+                        date: "13 ביולי: חקירת חופים",
+                        title: "למאי, סילבר וכפר הדייגים",
+                        description: "יום טיול באי: ביקור בחוף למאי השקט יותר, שנורקלינג בחוף סילבר הבתולי, וסיום בכפר הדייגים הציורי בבופוט (מומלץ בערב).",
+                        cost: "השכרת רכב עם נהג: 2,000-2,500 באט ליום.",
+                        clothing: "בגד ים, בגדים קצרים וקלילים לסיור חופים.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'&destination=Lamai+Beach,+Koh+Samui, חוף למאי&waypoints=Fisherman's+Village,+Bophut, כפר הדייגים בופוט"
+                    },
+                    {
+                        date: "14 ביולי: מפלים ובישול",
+                        title: "מפלי נאמואנג וסדנת בישול",
+                        description: "ביקור מרענן במפלי נאמואנג (Na Muang) עם אפשרות לשחייה בבריכות טבעיות, ולאחר מכן השתתפות בסדנת בישול תאילנדית אותנטית.",
+                        cost: "נסיעה: 400-600 באט לכיוון. סדנה: כ-1,500 באט.",
+                        clothing: "בגד ים (לשחייה במפלים), בגדים נוחים להליכה.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'&destination=Na+Muang+Waterfall,+Koh+Samui, מפלי נאמואנג"
+                    },
+                    {
+                        date: "15 ביולי: מעבר למלון אבאני",
+                        title: "שדרוג חווית הלינה",
+                        description: "צ'ק-אאוט ממלון קומבו ומעבר קצר למלון Avani Chaweng Samui Hotel & Beach Club, להמשך שהות מפנקת באותו אזור.",
+                        cost: "נסיעה קצרה במונית.",
+                        clothing: "בגדים קלילים ונוחים למעבר בין המלונות.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'&destination=Avani+Chaweng+Samui+Hotel+%26+Beach+Club, מלון אבאני צ'אוונג"
+                    },
+                    {
+                        date: "15-19 ביולי: חופש!",
+                        title: "מנוחה, קניות וספורט ימי",
+                        description: "ימים חופשיים להנאה צרופה. מנוחה בבריכה או בחוף, קניות במרכז צ'אוונג, ופעילויות ספורט ימי מגוונות המוצעות לאורך החוף.",
+                        cost: "משתנה.",
+                        clothing: "בגדי ים, בגדים קצרים ונוחים לימי מנוחה.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/place?key=API_KEY_PLACEHOLDER&q=Chaweng+Beach,+Koh+Samui, חוף צ'אוונג"
+                    },
+                     {
+                        date: "20 ביולי: טיסה לבנגקוק",
+                        title: "פרידה מהאיים וחזרה לעיר הגדולה",
+                        description: "טיסת צהריים מקוסמוי (USM) לבנגקוק (BKK) עם בנגקוק איירווייז (PG150).",
+                        cost: "עלות טיסה.",
+                        clothing: "בגדים נוחים לטיסה.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Avani+Chaweng+Samui+Hotel+%26+Beach+Club, מלון אבאני צ'אוונג&destination=Samui+International+Airport, נמל התעופה של קוסמוי"
+                    }
+                ]
+            },
+            bangkok: {
+                title: "בנגקוק: עיר של מקדשים ושווקים",
+                duration: "20-23 יולי (3 לילות)",
+                hotel: "Sindhorn Midtown Hotel Bangkok, Vignette Collection",
+                weather: {
+                    title: "תחזית מזג אוויר לבנגקוק",
+                    details: "חם ולח מאוד, עם סיכוי גבוה לגשמים חזקים אך קצרים בשעות אחר הצהריים והערב. הקפידו לשתות הרבה מים. טמפרטורה ממוצעת: 26-33 מעלות צלזיוס."
+                },
+                 kosher: {
+                    name: "בית חב\"ד ומסעדות כשרות",
+                    details: [
+                        "<strong>בית חב\"ד בנגקוק:</strong> המרכז הראשי נמצא ברחוב קוואסן.",
+                        "<strong>מסעדת \"גולדיס\" (כשרה):</strong> נמצאת ליד מלון Century Park.",
+                        "<strong>מסעדת \"בראשית\" (כשרה):</strong> ממוקמת ליד בית חב\"ד המרכזי."
+                    ]
+                },
+                days: [
+                    {
+                        date: "20 ביולי: הגעה לבנגקוק",
+                        title: "נחיתה והתמקמות במלון",
+                        description: "נחיתה בבנגקוק (BKK) ונסיעה למלון Sindhorn Midtown. התארגנות ויציאה לארוחת ערב.",
+                        cost: "רכבת: 100 באט לאדם, מונית: 400-600 באט.",
+                        clothing: "בגדים קלים ונוחים לנסיעה והגעה לעיר הגדולה.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Suvarnabhumi+Airport,+Bangkok, נמל התעופה סוברנבהומי&destination=Sindhorn+Midtown+Hotel+Bangkok, מלון סינדהורן מידטאון"
+                    },
+                    {
+                        date: "21 ביולי: מקדשים וארמונות",
+                        title: "ארמון המלך, וואט פו וואט ארון",
+                        description: "יום המוקדש לאתרי החובה של בנגקוק: ארמון המלך המפואר, וואט פו (הבודהה השוכב) הסמוך, וחציית הנהר לוואט ארון (מקדש השחר) המרשים.",
+                        cost: "נסיעה: 80-300 באט. כניסות: כ-800 באט לאדם.",
+                        clothing: "קוד לבוש קפדני: חולצה עם שרוולים, מכנסיים ארוכים/חצאית עד הקרסול.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Sindhorn+Midtown+Hotel+Bangkok, מלון סינדהורן מידטאון&destination=Grand+Palace,+Bangkok, ארמון המלך&waypoints=Wat+Pho,Bangkok, וואט פו|Wat+Arun,Bangkok, וואט ארון"
+                    },
+                    {
+                        date: "22 ביולי: שווקים",
+                        title: "השוק הצף ושוק הלילה",
+                        description: "טיול מחוץ לעיר לשוק הצף דמנואן סדואק (מומלץ טיול מאורגן). בערב, ביקור בשוק הלילה התוסס פטפונג לקניות ואווירה.",
+                        cost: "טיול לשוק הצף: 1,800-2,500 באט. נסיעה לפטפונג: 100-200 באט.",
+                        clothing: "בגדים קלים ונוחים להליכה ממושכת בשווקים.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Sindhorn+Midtown+Hotel+Bangkok, מלון סינדהורן מידטאון&destination=Damnoen+Saduak+Floating+Market, השוק הצף דמנואן סדואק"
+                    },
+                    {
+                        date: "23 ביולי: קניות אחרונות וטיסה",
+                        title: "קניות ופרידה",
+                        description: "בוקר של קניות אחרונות בקניונים הגדולים (Siam Paragon, CentralWorld) הסמוכים למלון, ולאחר מכן נסיעה לשדה התעופה לטיסה חזרה ארצה.",
+                        cost: "משתנה.",
+                        clothing: "בגדים נוחים לקניות ולטיסה חזרה הביתה.",
+                        mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Sindhorn+Midtown+Hotel+Bangkok, מלון סינדהורן מידטאון&destination=Siam+Paragon, קניון סיאם פרגון"
+                    }
+                ]
             }
+        };
 
-            setTimeout(() => {
-                splashTitle.textContent = "ברכות למשפחת ראש וביטן!";
-                splashTitle.classList.remove('opacity-0');
-                setTimeout(showNextMessage, 5000);
-            }, 5000);
+        const fullItineraryPoints = [
+            { name: "נמל התעופה בן גוריון", query: "Ben Gurion Airport, נמל התעופה בן גוריון" },
+            { name: "מלון אינדיגו, פוקט", query: "Hotel Indigo Phuket Patong, מלון אינדיגו פוקט" },
+            { name: "נמל התעופה של פוקט", query: "Phuket International Airport, נמל התעופה של פוקט" },
+            { name: "נמל התעופה של קוסמוי", query: "Samui International Airport, נמל התעופה של קוסמוי" },
+            { name: "מלון קומבו ביץ', קוסמוי", query: "Combo Beach Hotel Samui, מלון קומבו ביץ'" },
+            { name: "מלון אבאני צ'אוונג, קוסמוי", query: "Avani Chaweng Samui Hotel & Beach Club, מלון אבאני צ'אוונג" },
+            { name: "נמל התעופה של קוסמוי (חזרה)", query: "Samui International Airport, נמל התעופה של קוסמוי" },
+            { name: "מלון סינדהורן מידטאון, בנגקוק", query: "Sindhorn Midtown Hotel Bangkok, מלון סינדהורן מידטאון" },
+            { name: "ארמון המלך, בנגקוק", query: "Grand Palace, Bangkok, ארמון המלך" },
+            { name: "קניון סיאם פרגון, בנגקוק", query: "Siam Paragon, קניון סיאם פרגון" },
+        ];
 
+        const tabs = document.querySelectorAll('.tab-button');
+        const contents = document.querySelectorAll('.tab-content');
+        
+        const apiKey = "AIzaSyBYFLOsU9_GNOAp6ddyz78r9MAUW6G3rtM";
 
-            startPlanningBtn.addEventListener('click', () => {
-                splashScreen.style.display = 'none';
-                initialChoiceDiv.style.display = 'block';
+        function generateContent(cityKey) {
+            const cityData = tripData[cityKey];
+            const container = document.getElementById(`${cityKey}-content`);
+
+            const daysHtml = cityData.days.map((day, index) => `
+                <div class="day-item bg-white rounded-lg mb-2 shadow-sm transition-all duration-300">
+                    <button data-day-index="${index}" data-city="${cityKey}" class="w-full text-right p-4 flex justify-between items-center">
+                        <span class="font-bold text-teal-700">${day.date}</span>
+                        <span class="text-slate-800">${day.title}</span>
+                        <svg class="w-6 h-6 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="day-content px-4">
+                        <div class="border-t border-slate-200 pt-4 pb-4 space-y-2">
+                            <p class="text-slate-700">${day.description}</p>
+                            <p class="text-sm font-semibold text-teal-600">💰 עלויות: ${day.cost}</p>
+                            ${day.clothing ? `<p class="text-sm font-semibold text-indigo-600">👕 לבוש מומלץ: ${day.clothing}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const weatherHtml = `
+                <div class="bg-blue-50 border-r-4 border-blue-500 p-4 rounded-lg mb-6">
+                    <h3 class="text-lg font-bold text-blue-800">${cityData.weather.title}</h3>
+                    <p class="mt-2 text-slate-700">${cityData.weather.details}</p>
+                </div>
+            `;
+
+            const kosherHtml = `
+                <div class="bg-amber-100 border-r-4 border-amber-500 p-4 rounded-lg mb-6">
+                    <h3 class="text-lg font-bold text-amber-800">${cityData.kosher.name}</h3>
+                    <ul class="list-none mt-2 space-y-1 text-slate-700">
+                        ${cityData.kosher.details.map(d => `<li>${d}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div id="${cityKey}-itinerary">
+                        <h2 class="text-3xl font-bold text-teal-700 mb-2">${cityData.title}</h2>
+                        <p class="text-slate-600 mb-1">📅 ${cityData.duration}</p>
+                        <p class="text-slate-600 mb-4">🏨 לינה: ${cityData.hotel}</p>
+                        ${weatherHtml}
+                        ${kosherHtml}
+                        <div id="days-container-${cityKey}">${daysHtml}</div>
+                    </div>
+                    <div class="sticky top-8 h-full">
+                         <div id="map-container-${cityKey}" class="map-container rounded-2xl shadow-lg w-full">
+                            <iframe
+                                loading="lazy"
+                                allowfullscreen
+                                src="${cityData.days[0].mapUrl.replace('API_KEY_PLACEHOLDER', apiKey)}">
+                            </iframe>
+                        </div>
+                        <p class="text-center text-sm text-slate-500 mt-2">📍 המפה מתעדכנת בהתאם ליום הנבחר</p>
+                        <p id="api-key-notice-${cityKey}" class="text-center text-xs text-red-600 mt-1 hidden">נדרש מפתח API תקין של Google Maps להצגת המפה.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setupEventListeners(cityKey) {
+            const dayItems = document.querySelectorAll(`#days-container-${cityKey} .day-item button`);
+            dayItems.forEach(button => {
+                button.addEventListener('click', () => {
+                    const dayIndex = button.dataset.dayIndex;
+                    const mapUrl = tripData[cityKey].days[dayIndex].mapUrl;
+                    const mapFrame = document.querySelector(`#map-container-${cityKey} iframe`);
+
+                    // Update map
+                    mapFrame.src = mapUrl.replace('API_KEY_PLACEHOLDER', apiKey);
+
+                    // Accordion logic
+                    const content = button.nextElementSibling;
+                    const parent = button.parentElement;
+                    const arrow = button.querySelector('svg');
+
+                    if (parent.classList.contains('active')) {
+                        content.style.maxHeight = '0';
+                        parent.classList.remove('active');
+                        arrow.classList.remove('rotate-180');
+                    } else {
+                        // Close other open items
+                        document.querySelectorAll(`#days-container-${cityKey} .day-item.active`).forEach(activeItem => {
+                            activeItem.classList.remove('active');
+                            activeItem.querySelector('.day-content').style.maxHeight = '0';
+                            activeItem.querySelector('svg').classList.remove('rotate-180');
+                        });
+                        
+                        parent.classList.add('active');
+                        content.style.maxHeight = content.scrollHeight + "px";
+                        arrow.classList.add('rotate-180');
+                    }
+                });
             });
+             // Show API key notice if needed
+            if (apiKey.startsWith("הכנס כאן")) {
+                document.getElementById(`api-key-notice-${cityKey}`).classList.remove('hidden');
+            }
+        }
 
-            const tabsConfig = {
-                '1': [ { id: 'overview', text: 'סקירה כללית' }, { id: 'itinerary', text: 'מסלול טיול 1' }, { id: 'logistics', text: 'טיסות ולינה' }, { id: 'travelers', text: 'הנוסעים' }, { id: 'map', text: 'מפה וגלריה' } ],
-                '2': [ { id: 'overview', text: 'סקירה כללית' }, { id: 'alternative-itinerary', text: 'מסלול טיול 2' }, { id: 'logistics', text: 'טיסות ולינה' }, { id: 'travelers', text: 'הנוסעים' }, { id: 'map-alternative', text: 'מפה וגלריה (חלופי)' } ],
-                '3': [ { id: 'overview', text: 'סקירה כללית' }, { id: 'itinerary-3', text: 'מסלול טיול 3' }, { id: 'logistics', text: 'טיסות ולינה' }, { id: 'travelers', text: 'הנוסעים' }, { id: 'map-itinerary-3', text: 'מפה וגלריה (מסלול 3)' } ]
+        function populateToc() {
+            const tocList = document.getElementById('trip-toc');
+            if (!tocList) return;
+            tocList.innerHTML = ''; // Clear existing
+            fullItineraryPoints.forEach((point, index) => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.textContent = point.name;
+                button.className = 'toc-button';
+                button.dataset.index = index;
+                button.onclick = () => {
+                    updateOverviewMap(index);
+                    // Highlight active button
+                    document.querySelectorAll('#trip-toc .toc-button').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                };
+                li.appendChild(button);
+                tocList.appendChild(li);
+            });
+        }
+
+        function updateOverviewMap(index) {
+            const mapIframe = document.getElementById('overview-map-iframe');
+            if (!mapIframe || index >= fullItineraryPoints.length - 1) {
+                // If it's the last point, just show its location
+                 const origin = fullItineraryPoints[index].query;
+                 const url = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(origin)}`;
+                 mapIframe.src = url;
+                return;
             };
 
-            function setupTabs(planType) {
-                mainNav.innerHTML = '';
-                tabsConfig[planType].forEach((tab, index) => {
-                    const button = document.createElement('button');
-                    button.dataset.tab = tab.id;
-                    button.className = 'tab-button text-sm sm:text-base px-4 py-3 border-b-4 border-transparent hover:bg-gray-100 transition-colors duration-200';
-                    button.textContent = tab.text;
-                    if (index === 0) button.classList.add('active');
-                    mainNav.appendChild(button);
-                });
+            const origin = fullItineraryPoints[index].query;
+            const destination = fullItineraryPoints[index + 1].query;
+            const url = `https://www.google.com/maps/embed/v1/directions?key=${apiKey}&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+            mapIframe.src = url;
+        }
 
-                document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
-                document.getElementById(tabsConfig[planType][0].id).style.display = 'block';
-            }
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.dataset.tab;
 
-            function showPlan(planType) {
-                initialChoiceDiv.style.display = 'none';
-                planContentDiv.style.display = 'block';
-                setupTabs(planType);
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                contents.forEach(content => content.classList.add('hidden'));
                 
-                setTimeout(() => {
-                    initializeOverviewChart();
-                    if (planType === '1') { initializeMainMap(); initialize3DMap('map_3d_1', '1'); }
-                    if (planType === '2') { initializeAlternativeMap(); initialize3DMap('map_3d_2', '2'); }
-                    if (planType === '3') { initializeItinerary3Map(); initialize3DMap('map_3d_3', '3'); }
-                }, 0);
-            }
+                const activeContent = document.getElementById(`${tabId}-content`);
+                activeContent.classList.remove('hidden');
 
-            choice1.addEventListener('click', () => showPlan('1'));
-            choice2.addEventListener('click', () => showPlan('2'));
-            choice3.addEventListener('click', () => showPlan('3'));
-            
-            backButton.addEventListener('click', () => {
-                planContentDiv.style.display = 'none';
-                initialChoiceDiv.style.display = 'block';
-                 Object.values(threeJsInstances).forEach(instance => {
-                    if (instance.animationFrameId) {
-                        cancelAnimationFrame(instance.animationFrameId);
+                if (tabId !== 'overview') {
+                    if (activeContent.innerHTML === '') {
+                        generateContent(tabId);
+                        setupEventListeners(tabId);
                     }
-                });
-                threeJsInstances = {};
-                mainMapInitialized = altMapInitialized = itinerary3MapInitialized = false;
-                if(window.overviewChart) {
-                    window.overviewChart.destroy();
-                    window.overviewChart = null;
                 }
             });
+        });
 
-            mainNav.addEventListener('click', (e) => {
-                const targetTab = e.target.closest('.tab-button');
-                if (!targetTab) return;
-                
-                const tabId = targetTab.dataset.tab;
-                mainNav.querySelectorAll('.tab-button').forEach(tab => tab.classList.remove('active'));
-                targetTab.classList.add('active');
-
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.style.display = 'none';
-                });
-                document.getElementById(tabId).style.display = 'block';
-
-                if (tabId === 'overview') setTimeout(initializeOverviewChart, 0);
-                if (tabId === 'map') setTimeout(() => { initializeMainMap(); initialize3DMap('map_3d_1', '1'); }, 0);
-                if (tabId === 'map-alternative') setTimeout(() => { initializeAlternativeMap(); initialize3DMap('map_3d_2', '2'); }, 0);
-                if (tabId === 'map-itinerary-3') setTimeout(() => { initializeItinerary3Map(); initialize3DMap('map_3d_3', '3'); }, 0);
-            });
-
-            const accordionItems = document.querySelectorAll('.accordion-item');
-            accordionItems.forEach(item => {
-                const button = item.querySelector('.accordion-button');
-                const content = item.querySelector('.accordion-content');
-                button.addEventListener('click', () => {
-                    button.classList.toggle('open');
-                    if (content.style.maxHeight) {
-                        content.style.maxHeight = null;
-                    } else {
-                        content.style.maxHeight = content.scrollHeight + "px";
-                    }
-                });
-            });
-            
-            function initializeOverviewChart() {
-                const canvas = document.getElementById('timelineChart');
-                if (!canvas) return;
-                if (window.overviewChart instanceof Chart) {
-                    window.overviewChart.destroy();
-                }
-                const ctx = canvas.getContext('2d');
-                window.overviewChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['פוקט', 'קוסמוי', 'בנגקוק'],
-                        datasets: [{
-                            label: 'מספר לילות',
-                            data: [5, 9, 3],
-                            backgroundColor: ['rgba(90, 140, 120, 0.7)','rgba(212, 163, 115, 0.7)','rgba(229, 149, 0, 0.7)',],
-                            borderColor: ['rgb(90, 140, 120)','rgb(212, 163, 115)','rgb(229, 149, 0)',],
-                            borderWidth: 1
-                        }]
+        // Weather Chart
+        const ctx = document.getElementById('weatherChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['פוקט', 'קוסמוי', 'בנגקוק'],
+                datasets: [{
+                    label: 'טמפ׳ ממוצעת (°C)',
+                    data: [28, 29, 29.5],
+                    backgroundColor: 'rgba(15, 118, 110, 0.6)',
+                    borderColor: 'rgba(15, 118, 110, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'סיכוי יחסי לגשם',
+                    data: [7, 5, 8],
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                           font: {
+                                family: "'Assistant', sans-serif"
+                            }
+                        }
                     },
-                    options: {
-                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: {display: false}, tooltip: { bodyFont: {family: 'Assistant'}, titleFont: {family: 'Assistant'},}},
-                        scales: {
-                            x: { beginAtZero: true, title: { display: true, text: 'מספר לילות', font: { family: 'Assistant', size: 14, weight: '600'}}, ticks: { font: { family: 'Assistant'}}},
-                            y: { ticks: { font: { family: 'Assistant', size: 14, weight: '600'}}}
+                    x: {
+                        ticks: {
+                           font: {
+                                family: "'Assistant', sans-serif",
+                                size: 14,
+                                weight: 'bold'
+                            }
                         }
                     }
-                });
-            }
-
-            // Map and KML functions
-            function initializeMainMap() { if (!mainMapInitialized) { mainMapInitialized = true; /* ... map init code ... */ } }
-            function initializeAlternativeMap() { if (!altMapInitialized) { altMapInitialized = true; /* ... map init code ... */ } }
-            function initializeItinerary3Map() { if (!itinerary3MapInitialized) { itinerary3MapInitialized = true; /* ... map init code ... */ } }
-            // ... (All Leaflet map and KML download functions from previous version are here) ...
-
-            function initialize3DMap(containerId, itineraryId) {
-                if (threeJsInstances[containerId]) return;
-
-                const container = document.getElementById(containerId);
-                if (!container) return;
-
-                const scene = new THREE.Scene();
-                const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-                const renderer = new THREE.WebGLRenderer({ antialias: true });
-                renderer.setSize(container.clientWidth, container.clientHeight);
-                renderer.setClearColor(0x00001a);
-                container.innerHTML = '';
-                container.appendChild(renderer.domElement);
-
-                const controls = new THREE.OrbitControls(camera, renderer.domElement);
-                controls.enableDamping = true;
-                controls.dampingFactor = 0.05;
-
-                const textureLoader = new THREE.TextureLoader();
-                const earthTexture = textureLoader.load('https://unpkg.com/three-globe/example/img/earth-dark.jpg');
-                const geometry = new THREE.SphereGeometry(5, 64, 64);
-                const material = new THREE.MeshPhongMaterial({ map: earthTexture });
-                const sphere = new THREE.Mesh(geometry, material);
-                scene.add(sphere);
-                
-                scene.add(new THREE.AmbientLight(0xcccccc, 0.5));
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-                directionalLight.position.set(5, 3, 5);
-                scene.add(directionalLight);
-                
-                const locations = {
-                    '1': { phuket: { lat: 7.89, lng: 98.29 }, samui: { lat: 9.53, lng: 100.06 }, bangkok: { lat: 13.74, lng: 100.53 } },
-                    '2': { phuket: { lat: 7.89, lng: 98.29 }, samui: { lat: 9.53, lng: 100.06 }, bangkok: { lat: 13.74, lng: 100.53 } },
-                    '3': { phuket: { lat: 7.89, lng: 98.29 }, khaoSok: { lat: 8.91, lng: 98.52 }, samui: { lat: 9.53, lng: 100.06 }, bangkok: { lat: 13.74, lng: 100.53 } }
-                };
-                
-                const routePoints = Object.values(locations[itineraryId]);
-
-                function latLonToVector3(lat, lon, radius) {
-                    const phi = (90 - lat) * (Math.PI / 180);
-                    const theta = (lon + 180) * (Math.PI / 180);
-                    const x = -(radius * Math.sin(phi) * Math.cos(theta));
-                    const z = (radius * Math.sin(phi) * Math.sin(theta));
-                    const y = (radius * Math.cos(phi));
-                    return new THREE.Vector3(x, y, z);
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                family: "'Assistant', sans-serif"
+                            }
+                        }
+                    },
+                     tooltip: {
+                        titleFont: { family: "'Assistant', sans-serif" },
+                        bodyFont: { family: "'Assistant', sans-serif" }
+                    }
                 }
-
-                const points = [];
-                routePoints.forEach(p => {
-                    const pos = latLonToVector3(p.lat, p.lng, 5);
-                    points.push(pos);
-                    const pointGeometry = new THREE.SphereGeometry(0.05, 16, 16);
-                    const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
-                    const pointMesh = new THREE.Mesh(pointGeometry, pointMaterial);
-                    pointMesh.position.copy(pos);
-                    scene.add(pointMesh);
-                });
-                
-                for (let i = 0; i < points.length - 1; i++) {
-                    const start = points[i];
-                    const end = points[i+1];
-                    const arc = createCurve(start, end, 5);
-                    const curveGeometry = new THREE.TubeGeometry(arc, 64, 0.01, 8, false);
-                    const curveMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-                    const curveMesh = new THREE.Mesh(curveGeometry, curveMaterial);
-                    scene.add(curveMesh);
-                }
-
-                function createCurve(start, end, radius) {
-                    const v1 = start.clone();
-                    const v2 = end.clone();
-                    const mid = v1.clone().add(v2).multiplyScalar(0.5);
-                    const midLength = mid.length();
-                    mid.normalize();
-                    mid.multiplyScalar(midLength + 0.5);
-                    return new THREE.QuadraticBezierCurve3(v1, mid, v2);
-                }
-
-                camera.position.z = 15;
-
-                const animate = function () {
-                    const id = requestAnimationFrame(animate);
-                    threeJsInstances[containerId].animationFrameId = id;
-                    controls.update();
-                    renderer.render(scene, camera);
-                };
-                
-                threeJsInstances[containerId] = { animationFrameId: null };
-                animate();
-
-                window.addEventListener('resize', () => {
-                    camera.aspect = container.clientWidth / container.clientHeight;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(container.clientWidth, container.clientHeight);
-                }, false);
-            }
-             // KML and 2D Map functions from previous version...
-            const downloadKmlButton = document.getElementById('downloadKml');
-            if(downloadKmlButton) {
-                downloadKmlButton.addEventListener('click', () => {
-                    const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-    <kml xmlns="http://www.opengis.net/kml/2.2">
-      <Document>
-        <name>מסלול טיול 1 - תאילנד</name>
-        <Placemark><name>Hotel Indigo Phuket Patong</name><description>6-11 יולי</description><Point><coordinates>98.2954,7.8935,0</coordinates></Point></Placemark>
-        <Placemark><name>Combo Beach Club &amp; Resort, Koh Samui</name><description>11-15 יולי</description><Point><coordinates>100.0628,9.5308,0</coordinates></Point></Placemark>
-        <Placemark><name>Avani Chaweng Samui</name><description>15-20 יולי</description><Point><coordinates>100.0632,9.5259,0</coordinates></Point></Placemark>
-        <Placemark><name>Sindhorn Midtown Hotel Bangkok</name><description>20-23 יולי</description><Point><coordinates>100.5393,13.7465,0</coordinates></Point></Placemark>
-      </Document>
-    </kml>`;
-                    const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml;charset=utf-8' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = 'Thailand_Trip_1_Itinerary.kml';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                });
-            }
-
-            const downloadKmlAlternativeButton = document.getElementById('downloadKmlAlternative');
-            if(downloadKmlAlternativeButton) {
-                downloadKmlAlternativeButton.addEventListener('click', () => {
-                    const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-    <kml xmlns="http://www.opengis.net/kml/2.2">
-      <Document>
-        <name>מסלול טיול 2 - תאילנד</name>
-        <Placemark><name>מפרץ פאנג נה</name><Point><coordinates>98.500,8.274,0</coordinates></Point></Placemark>
-        <Placemark><name>קניון סנטרל פוקט</name><Point><coordinates>98.368,7.892,0</coordinates></Point></Placemark>
-        <Placemark><name>קו טאו</name><Point><coordinates>99.840,10.095,0</coordinates></Point></Placemark>
-        <Placemark><name>Asiatique The Riverfront</name><Point><coordinates>100.503,13.704,0</coordinates></Point></Placemark>
-        <Placemark><name>קניון MBK</name><Point><coordinates>100.530,13.744,0</coordinates></Point></Placemark>
-      </Document>
-    </kml>`;
-                    const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml;charset=utf-8' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = 'Thailand_Trip_2_Itinerary.kml';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                });
-            }
-            
-            const downloadKml3Button = document.getElementById('downloadKml3');
-            if(downloadKml3Button) {
-                downloadKml3Button.addEventListener('click', () => {
-                    const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-    <kml xmlns="http://www.opengis.net/kml/2.2">
-      <Document>
-        <name>מסלול טיול 3 - תאילנד</name>
-        <Placemark><name>חוף נאי הארן</name><Point><coordinates>98.305,7.775,0</coordinates></Point></Placemark>
-        <Placemark><name>הפארק הלאומי קאו סוק</name><Point><coordinates>98.528,8.913,0</coordinates></Point></Placemark>
-        <Placemark><name>אגם צ'או לאן</name><Point><coordinates>98.786,8.971,0</coordinates></Point></Placemark>
-        <Placemark><name>גן הבודהה הסודי</name><Point><coordinates>100.015,9.505,0</coordinates></Point></Placemark>
-      </Document>
-    </kml>`;
-                    const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml;charset=utf-8' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = 'Thailand_Trip_3_Itinerary.kml';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                });
             }
         });
-    </script>
+        
+        // Initial load
+        populateToc();
+        document.querySelector('.tab-button[data-tab="phuket"]').click();
+        document.querySelector('.tab-button[data-tab="overview"]').click();
 
+
+    </script>
 </body>
 </html>
