@@ -17,13 +17,31 @@
             scroll-behavior: smooth;
         }
         #splash-screen {
-            background: linear-gradient(to bottom, #06b6d4, #0d9488);
+            background-image: url('https://images.pexels.com/photos/237272/pexels-photo-237272.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2');
+            background-size: cover;
+            background-position: center;
+            position: fixed;
+        }
+        #splash-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 1;
+        }
+        #splash-screen > * {
+            position: relative;
+            z-index: 2;
         }
         .promo-text {
             opacity: 0;
             transition: opacity 1.5s ease-in-out;
             position: absolute;
             width: 100%;
+            text-shadow: 0px 2px 4px rgba(0,0,0,0.7);
         }
         .promo-text.visible {
             opacity: 1;
@@ -76,22 +94,37 @@
             background-color: #a7f3d0;
             font-weight: 600;
         }
+        .map-toggle-button.active {
+            background-color: #0d9488;
+            color: white;
+        }
+        .quiz-option {
+            transition: background-color 0.3s;
+        }
+        .quiz-option.correct {
+            background-color: #34d399 !important;
+            color: white;
+        }
+        .quiz-option.incorrect {
+            background-color: #f87171 !important;
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-amber-50 text-slate-800">
 
     <!-- Splash Screen -->
-    <div id="splash-screen" class="fixed top-0 left-0 w-full h-full flex flex-col justify-center items-center z-50 text-white text-center p-4 transition-opacity duration-500">
+    <div id="splash-screen" class="top-0 left-0 w-full h-full flex flex-col justify-center items-center z-50 text-white text-center p-4 transition-opacity duration-500">
         <div id="promo-container" class="relative h-48 w-full">
             <!-- Promo text will be injected here -->
         </div>
         <button id="skip-splash" class="bg-white text-teal-700 font-bold py-2 px-6 rounded-full shadow-lg hover:bg-teal-100 transition-colors mt-8">דילוג</button>
     </div>
 
-    <div id="main-content" class="container mx-auto p-4 md:p-8 opacity-0 transition-opacity duration-500">
+    <div id="main-content" class="container mx-auto p-2 sm:p-4 md:p-8 opacity-0 transition-opacity duration-500">
         <header class="text-center mb-8">
-            <h1 class="text-4xl md:text-5xl font-bold text-teal-800">המסע לתאילנד</h1>
-            <p class="text-lg text-slate-600 mt-2">מסלול הטיול האינטראקטיבי למשפחת ראש וביטן | יולי 2025</p>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-teal-800">המסע לתאילנד</h1>
+            <p class="text-base sm:text-lg text-slate-600 mt-2">מסלול הטיול האינטראקטיבי למשפחת ראש וביטן | יולי 2025</p>
         </header>
 
         <nav id="nav-tabs" class="flex flex-wrap justify-center gap-2 mb-8">
@@ -99,12 +132,13 @@
             <button data-tab="phuket" class="tab-button text-sm md:text-base font-semibold py-2 px-4 border-2 border-teal-600 rounded-full transition-colors duration-300 hover:bg-teal-100">✈️ פוקט</button>
             <button data-tab="samui" class="tab-button text-sm md:text-base font-semibold py-2 px-4 border-2 border-teal-600 rounded-full transition-colors duration-300 hover:bg-teal-100">🥥 קוסמוי</button>
             <button data-tab="bangkok" class="tab-button text-sm md:text-base font-semibold py-2 px-4 border-2 border-teal-600 rounded-full transition-colors duration-300 hover:bg-teal-100">🏙️ בנגקוק</button>
+            <button data-tab="quiz" class="tab-button text-sm md:text-base font-semibold py-2 px-4 border-2 border-teal-600 rounded-full transition-colors duration-300 hover:bg-teal-100">🧠 חידון</button>
         </nav>
 
         <main>
             <!-- Overview Tab -->
             <div id="overview-content" class="tab-content">
-                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-lg">
                     <h2 class="text-2xl font-bold text-teal-700 mb-4 border-b-2 pb-2 border-teal-200">ברוכים הבאים להרפתקה!</h2>
                     <p class="mb-4 text-slate-700">דף זה הוא המדריך האינטראקטיבי שלכם לטיול בתאילנד. הוא נועד להפוך את הניווט והתכנון לקלים ומהנים. תוכלו לעבור בין היעדים השונים באמצעות הכפתורים שלמעלה. בכל יעד, לחצו על היום המבוקש כדי לראות את פרטי התוכנית והמפה הרלוונטית.</p>
                     
@@ -148,6 +182,7 @@
             <div id="phuket-content" class="tab-content hidden"></div>
             <div id="samui-content" class="tab-content hidden"></div>
             <div id="bangkok-content" class="tab-content hidden"></div>
+            <div id="quiz-content" class="tab-content hidden"></div>
         </main>
     </div>
 
@@ -172,12 +207,12 @@
                     {
                         date: "5 ביולי: יציאה מישראל",
                         title: "טיסת לילה מתל אביב לבנגקוק",
-                        description: "ההרפתקה מתחילה! הגעה לנמל התעופה בן גוריון (TLV) והמראה בטיסת לילה (אל על LY0081) לבנגקוק (BKK).",
+                        description: "ההרפתקה מתחילה! הגעה לנמל התעופה בן גוריון (TLV) והמראה בשעה 23:30 בטיסת לילה (אל על LY0081) לבנגקוק (BKK).",
                         cost: "כלול במחיר הטיסה.",
                         clothing: "בגדים נוחים לטיסה ארוכה, משהו חם למטוס.",
                         transport: "טיסה בינלאומית.",
                         mapUrl: "https://www.google.com/maps/embed/v1/place?key=API_KEY_PLACEHOLDER&q=Ben+Gurion+Airport, נמל התעופה בן גוריון",
-                        imageUrl: "https://placehold.co/600x400/0284c7/FFFFFF?text=נמל+התעופה+בן+גוריון"
+                        streetViewCoords: "32.0095,34.8854"
                     },
                     {
                         date: "6 ביולי: הגעה לתאילנד והתארגנות",
@@ -187,7 +222,7 @@
                         clothing: "בגדים קלים ונוחים להגעה והתארגנות.",
                         transport: "טיסת פנים + מונית/Grab (כ-600-800 באט).",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Phuket+International+Airport, נמל התעופה של פוקט&destination=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט",
-                        imageUrl: "https://placehold.co/600x400/16a34a/FFFFFF?text=מלון+אינדיגו+פוקט"
+                        streetViewCoords: "7.8953,98.2969"
                     },
                     {
                         date: "7 ביולי: יום התאקלמות",
@@ -197,7 +232,7 @@
                         clothing: "בגד ים, בגדים קצרים וקלילים לחוף ולבריכה.",
                         transport: "הליכה רגלית.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Patong+Beach, חוף פטונג",
-                        imageUrl: "https://placehold.co/600x400/f97316/FFFFFF?text=חוף+פטונג"
+                        streetViewCoords: "7.8975,98.2950"
                     },
                     {
                         date: "8 ביולי: טיול יום לאיי פיפי",
@@ -207,7 +242,7 @@
                         clothing: "בגד ים, בגדים קלילים שמתייבשים מהר, כובע ומשקפי שמש.",
                         transport: "טיול מאורגן הכולל איסוף מהמלון.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Rassada+Pier,+Phuket, רציף ראסאדה",
-                        imageUrl: "https://placehold.co/600x400/0ea5e9/FFFFFF?text=איי+פיפי"
+                        streetViewCoords: "7.8760,98.4121"
                     },
                     {
                         date: "9 ביולי: תרבות ונופים",
@@ -217,7 +252,7 @@
                         clothing: "קוד לבוש חובה לבודהה הגדול: חולצה עם שרוולים ומכנסיים/חצאית המכסים את הברכיים.",
                         transport: "מונית או Grab ליום שלם (כ-1,000-1,500 באט).",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Big+Buddha,+Phuket, הבודהה הגדול&waypoints=Phuket+Old+Town, העיר העתיקה של פוקט",
-                        imageUrl: "https://placehold.co/600x400/ca8a04/FFFFFF?text=הבודהה+הגדול"
+                        streetViewCoords: "7.7796,98.3126"
                     },
                     {
                         date: "10 ביולי: יום כיף ואטרקציות",
@@ -227,7 +262,7 @@
                         clothing: "בגד ים ובגדים להחלפה.",
                         transport: "מונית או Grab (כ-400-800 באט לכיוון).",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Andamanda+Phuket, פארק המים אנדמנדה",
-                        imageUrl: "https://placehold.co/600x400/2563eb/FFFFFF?text=פארק+המים+אנדמנדה"
+                        streetViewCoords: "7.9015,98.3705"
                     },
                      {
                         date: "11 ביולי: טיסה לקוסמוי",
@@ -237,7 +272,7 @@
                         clothing: "בגדים נוחים לטיסה.",
                         transport: "מונית לשדה התעופה + טיסת פנים.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong, מלון אינדיגו פוקט&destination=Phuket+International+Airport, נמל התעופה של פוקט",
-                        imageUrl: "https://placehold.co/600x400/0284c7/FFFFFF?text=שדה+התעופה+פוקט"
+                        streetViewCoords: "8.1132,98.3069"
                     }
                 ]
             },
@@ -264,7 +299,7 @@
                         clothing: "בגדים קלים ונוחים לנחיתה והתמקמות.",
                         transport: "מיניבוס משותף (כ-150 באט לאדם) או מונית פרטית (500-700 באט).",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Samui+International+Airport, נמל התעופה של קוסמוי&destination=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'",
-                        imageUrl: "https://placehold.co/600x400/16a34a/FFFFFF?text=מלון+קומבו+ביץ'"
+                        streetViewCoords: "9.5295,100.0618"
                     },
                     {
                         date: "12 ביולי: הפארק הימי אנג ת'ונג",
@@ -274,7 +309,7 @@
                         clothing: "בגד ים, בגדים נוחים להליכה, נעליים למים וכובע.",
                         transport: "טיול מאורגן הכולל איסוף מהמלון.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'&destination=Nathon+Pier,+Koh+Samui, רציף נאת'ון",
-                        imageUrl: "https://placehold.co/600x400/0ea5e9/FFFFFF?text=הפארק+הימי+אנג+ת'ונג"
+                        streetViewCoords: "9.5342,99.9329"
                     },
                     {
                         date: "13 ביולי: חקירת חופים",
@@ -284,7 +319,7 @@
                         clothing: "בגד ים, בגדים קצרים וקלילים לסיור חופים.",
                         transport: "השכרת רכב עם נהג (כ-2,000-2,500 באט) או השכרת קטנועים (למנוסים בלבד).",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'&destination=Lamai+Beach,+Koh+Samui, חוף למאי&waypoints=Fisherman's+Village,+Bophut, כפר הדייגים בופוט",
-                        imageUrl: "https://placehold.co/600x400/f97316/FFFFFF?text=כפר+הדייגים+בופוט"
+                        streetViewCoords: "9.5560,100.0300"
                     },
                     {
                         date: "14 ביולי: מפלים ובישול",
@@ -294,7 +329,7 @@
                         clothing: "בגד ים (לשחייה במפלים), בגדים נוחים להליכה.",
                         transport: "מונית או Grab (כ-400-600 באט לכיוון).",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'&destination=Na+Muang+Waterfall,+Koh+Samui, מפלי נאמואנג",
-                        imageUrl: "https://placehold.co/600x400/1e40af/FFFFFF?text=מפלי+נאמואנג"
+                        streetViewCoords: "9.4645,99.9930"
                     },
                     {
                         date: "15 ביולי: מעבר למלון אבאני",
@@ -304,7 +339,7 @@
                         clothing: "בגדים קלילים ונוחים למעבר בין המלונות.",
                         transport: "מונית מקומית (Songthaew) או Grab.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Combo+Beach+Hotel+Samui, מלון קומבו ביץ'&destination=Avani+Chaweng+Samui+Hotel+%26+Beach+Club, מלון אבאני צ'אוונג",
-                        imageUrl: "https://placehold.co/600x400/16a34a/FFFFFF?text=מלון+אבאני+צ'אוונג"
+                        streetViewCoords: "9.5242,100.0635"
                     },
                     {
                         date: "15-19 ביולי: חופש!",
@@ -314,7 +349,7 @@
                         clothing: "בגדי ים, בגדים קצרים ונוחים לימי מנוחה.",
                         transport: "הליכה רגלית באזור צ'אוונג.",
                         mapUrl: "https://www.google.com/maps/embed/v1/place?key=API_KEY_PLACEHOLDER&q=Chaweng+Beach,+Koh+Samui, חוף צ'אוונג",
-                        imageUrl: "https://placehold.co/600x400/f97316/FFFFFF?text=חוף+צ'אוונג"
+                        streetViewCoords: "9.5300,100.0620"
                     },
                      {
                         date: "20 ביולי: טיסה לבנגקוק",
@@ -324,7 +359,7 @@
                         clothing: "בגדים נוחים לטיסה.",
                         transport: "מונית לשדה התעופה + טיסת פנים.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Avani+Chaweng+Samui+Hotel+%26+Beach+Club, מלון אבאני צ'אוונג&destination=Samui+International+Airport, נמל התעופה של קוסמוי",
-                        imageUrl: "https://placehold.co/600x400/0284c7/FFFFFF?text=שדה+התעופה+קוסמוי"
+                        streetViewCoords: "9.5485,100.0625"
                     }
                 ]
             },
@@ -353,7 +388,7 @@
                         clothing: "בגדים קלים ונוחים לנסיעה והגעה לעיר הגדולה.",
                         transport: "רכבת עילית (Airport Rail Link) או מונית עם מונה (כ-400-600 באט).",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Suvarnabhumi+Airport,+Bangkok, נמל התעופה סוברנבהומי&destination=Sindhorn+Midtown+Hotel+Bangkok, מלון סינדהורן מידטאון",
-                        imageUrl: "https://placehold.co/600x400/16a34a/FFFFFF?text=מלון+סינדהורן+מידטאון"
+                        streetViewCoords: "13.7410,100.5420"
                     },
                     {
                         date: "21 ביולי: מקדשים וארמונות",
@@ -363,7 +398,7 @@
                         clothing: "קוד לבוש קפדני: חולצה עם שרוולים, מכנסיים ארוכים/חצאית עד הקרסול.",
                         transport: "רכבת עילית (BTS) + סירת אקספרס בנהר (יעיל וזול) או Grab/מונית.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Sindhorn+Midtown+Hotel+Bangkok, מלון סינדהורן מידטאון&destination=Grand+Palace,+Bangkok, ארמון המלך&waypoints=Wat+Pho,Bangkok, וואט פו|Wat+Arun,Bangkok, וואט ארון",
-                        imageUrl: "https://placehold.co/600x400/ca8a04/FFFFFF?text=ארמון+המלך"
+                        streetViewCoords: "13.7500,100.4920"
                     },
                     {
                         date: "22 ביולי: שווקים",
@@ -373,7 +408,7 @@
                         clothing: "בגדים קלים ונוחים להליכה ממושכת בשווקים.",
                         transport: "מונית פרטית/טיול מאורגן לשוק הצף. Grab/מונית לשוק הלילה.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Sindhorn+Midtown+Hotel+Bangkok, מלון סינדהורן מידטאון&destination=Damnoen+Saduak+Floating+Market, השוק הצף דמנואן סדואק",
-                        imageUrl: "https://placehold.co/600x400/0ea5e9/FFFFFF?text=השוק+הצף"
+                        streetViewCoords: "13.5188,99.9591"
                     },
                     {
                         date: "23 ביולי: קניות אחרונות וטיסה",
@@ -383,7 +418,7 @@
                         clothing: "בגדים נוחים לקניות ולטיסה חזרה הביתה.",
                         transport: "רכבת עילית (BTS) לקניונים, ומונית/Grab לשדה התעופה.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Sindhorn+Midtown+Hotel+Bangkok, מלון סינדהורן מידטאון&destination=Siam+Paragon, קניון סיאם פרגון",
-                        imageUrl: "https://placehold.co/600x400/db2777/FFFFFF?text=קניון+סיאם+פרגון"
+                        streetViewCoords: "13.7464,100.5348"
                     }
                 ]
             }
@@ -438,7 +473,6 @@
                             <p class="text-sm font-semibold text-teal-600">💰 עלויות: ${day.cost}</p>
                             ${day.clothing ? `<p class="text-sm font-semibold text-indigo-600">👕 לבוש מומלץ: ${day.clothing}</p>` : ''}
                             ${day.transport ? `<p class="text-sm font-semibold text-cyan-600">🚗 אמצעי נסיעה: ${day.transport}</p>` : ''}
-                            ${day.imageUrl ? `<a href="${day.imageUrl}" target="_blank" class="block text-sm font-semibold text-pink-600 hover:underline">🖼️ צפה בתמונת המקום</a>` : ''}
                         </div>
                     </div>
                 </div>
@@ -473,12 +507,16 @@
                     <div class="sticky top-8 h-full">
                          <div id="map-container-${cityKey}" class="map-container rounded-2xl shadow-lg w-full">
                             <iframe
+                                id="map-iframe-${cityKey}"
                                 loading="lazy"
                                 allowfullscreen
-                                src="${cityData.days[0].mapUrl.replace('API_KEY_PLACEHOLDER', apiKey)}">
+                                src="${tripData[cityKey].days[0].mapUrl.replace('API_KEY_PLACEHOLDER', apiKey)}">
                             </iframe>
                         </div>
-                        <p class="text-center text-sm text-slate-500 mt-2">📍 המפה מתעדכנת בהתאם ליום הנבחר</p>
+                        <div class="flex justify-center gap-2 mt-2">
+                            <button data-city="${cityKey}" data-view="map" class="map-toggle-button active bg-teal-600 text-white py-1 px-3 rounded-full text-sm">מפת מסלול</button>
+                            <button data-city="${cityKey}" data-view="streetview" class="map-toggle-button bg-gray-300 text-gray-700 py-1 px-3 rounded-full text-sm">תצוגת רחוב</button>
+                        </div>
                         <p id="api-key-notice-${cityKey}" class="text-center text-xs text-red-600 mt-1 hidden">נדרש מפתח API תקין של Google Maps להצגת המפה.</p>
                     </div>
                 </div>
@@ -487,14 +525,20 @@
 
         function setupEventListeners(cityKey) {
             const dayItems = document.querySelectorAll(`#days-container-${cityKey} .day-item button`);
+            const mapFrame = document.querySelector(`#map-iframe-${cityKey}`);
+            
             dayItems.forEach(button => {
                 button.addEventListener('click', () => {
                     const dayIndex = button.dataset.dayIndex;
-                    const mapUrl = tripData[cityKey].days[dayIndex].mapUrl;
-                    const mapFrame = document.querySelector(`#map-container-${cityKey} iframe`);
+                    const dayData = tripData[cityKey].days[dayIndex];
+                    
+                    mapFrame.src = dayData.mapUrl.replace('API_KEY_PLACEHOLDER', apiKey);
 
-                    // Update map
-                    mapFrame.src = mapUrl.replace('API_KEY_PLACEHOLDER', apiKey);
+                    // Reset map view buttons
+                    document.querySelectorAll(`button[data-city="${cityKey}"]`).forEach(btn => btn.classList.remove('active', 'bg-teal-600', 'text-white'));
+                    document.querySelector(`button[data-city="${cityKey}"][data-view="map"]`).classList.add('active', 'bg-teal-600', 'text-white');
+                    document.querySelector(`button[data-city="${cityKey}"][data-view="streetview"]`).classList.add('bg-gray-300', 'text-gray-700');
+
 
                     // Accordion logic
                     const content = button.nextElementSibling;
@@ -506,7 +550,6 @@
                         parent.classList.remove('active');
                         arrow.classList.remove('rotate-180');
                     } else {
-                        // Close other open items
                         document.querySelectorAll(`#days-container-${cityKey} .day-item.active`).forEach(activeItem => {
                             activeItem.classList.remove('active');
                             activeItem.querySelector('.day-content').style.maxHeight = '0';
@@ -519,10 +562,27 @@
                     }
                 });
             });
-             // Show API key notice if needed
-            if (apiKey.startsWith("הכנס כאן")) {
-                document.getElementById(`api-key-notice-${cityKey}`).classList.remove('hidden');
-            }
+
+            document.querySelector(`button[data-city="${cityKey}"][data-view="map"]`).addEventListener('click', (e) => {
+                const activeDayButton = document.querySelector(`#days-container-${cityKey} .day-item.active button`);
+                if (activeDayButton) {
+                    const dayIndex = activeDayButton.dataset.dayIndex;
+                    mapFrame.src = tripData[cityKey].days[dayIndex].mapUrl.replace('API_KEY_PLACEHOLDER', apiKey);
+                    e.target.classList.add('active', 'bg-teal-600', 'text-white');
+                    e.target.nextElementSibling.classList.remove('active', 'bg-teal-600', 'text-white');
+                }
+            });
+
+             document.querySelector(`button[data-city="${cityKey}"][data-view="streetview"]`).addEventListener('click', (e) => {
+                const activeDayButton = document.querySelector(`#days-container-${cityKey} .day-item.active button`);
+                if (activeDayButton) {
+                    const dayIndex = activeDayButton.dataset.dayIndex;
+                    const coords = tripData[cityKey].days[dayIndex].streetViewCoords;
+                    mapFrame.src = `https://www.google.com/maps/embed/v1/streetview?key=${apiKey}&location=${coords}`;
+                    e.target.classList.add('active', 'bg-teal-600', 'text-white');
+                    e.target.previousElementSibling.classList.remove('active', 'bg-teal-600', 'text-white');
+                }
+            });
         }
 
         function populateToc() {
@@ -537,7 +597,6 @@
                 button.dataset.index = index;
                 button.onclick = () => {
                     updateOverviewMap(index);
-                    // Highlight active button
                     document.querySelectorAll('#trip-toc .toc-button').forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
                 };
@@ -551,7 +610,6 @@
             if (!mapIframe) return;
 
             if (index >= fullItineraryPoints.length - 1) {
-                // If it's the last point, just show its location
                  const origin = fullItineraryPoints[index].query;
                  const url = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${encodeURIComponent(origin)}`;
                  mapIframe.src = url;
@@ -592,7 +650,6 @@
             Google Earth ייקח אתכם למסע וירטואלי בין כל נקודות העניין.
         ]]></description>
 `;
-            // Add Placemarks for each point
             fullItineraryPoints.forEach(point => {
                 kmlContent += `
     <Placemark>
@@ -622,6 +679,131 @@
             document.body.removeChild(a);
         }
 
+        // --- Quiz Data and Logic ---
+        const quizQuestions = [
+            { question: "מה מספר הטיסה מתל אביב לבנגקוק?", options: ["LY81", "PG277", "LY007", "TG921"], answer: "LY81" },
+            { question: "מה שם המלון הראשון שלנו בפוקט?", options: ["Avani+", "Centara Grand", "Hotel Indigo", "Banyan Tree"], answer: "Hotel Indigo" },
+            { question: "באיזה יום בטיול נבקר בבודהה הגדול?", options: ["יום 7", "יום 9", "יום 12", "יום 5"], answer: "יום 9" },
+            { question: "מה קוד הלבוש הנדרש למקדשים?", options: ["בגדים קצרים", "כיסוי כתפיים וברכיים", "בגד ים", "אין קוד לבוש"], answer: "כיסוי כתפיים וברכיים" },
+            { question: "מה שם הפארק הלאומי הימי שנבקר בו מקוסמוי?", options: ["איי סימילאן", "אנג ת'ונג", "אראוון", "קאו סוק"], answer: "אנג ת'ונג" },
+            { question: "באיזה יום בשבוע מתקיים שוק הדייגים בבופוט?", options: ["שני", "רביעי", "שישי", "ראשון"], answer: "שישי" },
+            { question: "מה שם המלון האחרון שלנו בבנגקוק?", options: ["Sindhorn Midtown", "Lebua at State Tower", "Mandarin Oriental", "Siam Kempinski"], answer: "Sindhorn Midtown" },
+            { question: "מהו המטבע של תאילנד?", options: ["דונג", "ריאל", "דולר", "באט"], answer: "באט" },
+            { question: "באיזו חברת תעופה נטוס בטיסות הפנים?", options: ["Thai Airways", "Nok Air", "Bangkok Airways", "AirAsia"], answer: "Bangkok Airways" },
+            { question: "מה שם מקדש הבודהה השוכב?", options: ["וואט ארון", "וואט פו", "וואט סאקט", "וואט פרה קאו"], answer: "וואט פו" },
+            { question: "מה היה שמה הקודם של תאילנד?", options: ["בורמה", "לאוס", "סיאם", "קמבודיה"], answer: "סיאם" },
+            { question: "מהי הדת העיקרית בתאילנד?", options: ["אסלאם", "הינדואיזם", "נצרות", "בודהיזם"], answer: "בודהיזם" },
+            { question: "איך קוראים לברכת השלום התאילנדית המסורתית?", options: ["סבאיידי", "וואי", "קופון", "סאנוק"], answer: "וואי" },
+            { question: "מהי עיר הבירה של תאילנד?", options: ["צ'יאנג מאי", "פטאיה", "בנגקוק", "פוקט"], answer: "בנגקוק" },
+            { question: "איזו חיה היא הסמל הלאומי של תאילנד?", options: ["טיגריס", "נמר", "פיל", "קוף"], answer: "פיל" },
+            { question: "מה שם המרק החריף-חמוץ המפורסם?", options: ["פאד תאי", "סום טאם", "מאסמאן קארי", "טום יאם"], answer: "טום יאם" },
+            { question: "הגשר על נהר קוואי ממוקם ליד איזו עיר?", options: ["איוטהאיה", "קנצ'נבורי", "סוקותאי", "לופבורי"], answer: "קנצ'נבורי" },
+            { question: "איך נקרא ראש השנה התאילנדי, המפורסם בקרבות המים שלו?", options: ["לוי קראתונג", "סונגקראן", "ויסאקה בוצ'ה", "מאגה בוצ'ה"], answer: "סונגקראן" },
+            { question: "איזה מלך מפורסם במודרניזציה של תאילנד והיה נושא המחזמר \"המלך ואני\"?", options: ["ראמה התשיעי", "ראמה החמישי (צ'וללונגקורן)", "ראמה הרביעי (מונגקוט)", "ראמה הראשון"], answer: "ראמה הרביעי (מונגקוט)" },
+            { question: "מה הפירוש של \"מואי תאי\"?", options: ["ריקוד תאילנדי", "אוכל תאילנדי", "אגרוף תאילנדי", "שפה תאילנדית"], answer: "אגרוף תאילנדי" }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        function generateQuiz() {
+            const quizContainer = document.getElementById('quiz-content');
+            quizContainer.innerHTML = `
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-lg max-w-2xl mx-auto">
+                    <div id="quiz-header" class="text-center border-b pb-4 mb-4">
+                        <h2 class="text-2xl font-bold text-teal-700">חידון תאילנד הגדול!</h2>
+                        <p class="text-slate-600">בואו נראה כמה אתם מוכנים לטיול...</p>
+                    </div>
+                    <div id="quiz-body">
+                        <!-- Quiz question will be injected here -->
+                    </div>
+                </div>
+            `;
+            showQuizQuestion();
+        }
+
+        function showQuizQuestion() {
+            if (currentQuestionIndex >= quizQuestions.length) {
+                showQuizResults();
+                return;
+            }
+            const questionData = quizQuestions[currentQuestionIndex];
+            const quizBody = document.getElementById('quiz-body');
+            const optionsHtml = questionData.options.map(option => 
+                `<button class="quiz-option w-full text-right bg-gray-200 hover:bg-gray-300 p-3 rounded-lg font-semibold">${option}</button>`
+            ).join('');
+
+            quizBody.innerHTML = `
+                <div class="mb-4">
+                    <p class="text-lg font-semibold text-slate-800">שאלה ${currentQuestionIndex + 1} מתוך ${quizQuestions.length}:</p>
+                    <h3 class="text-xl font-bold mt-1">${questionData.question}</h3>
+                </div>
+                <div class="space-y-3">${optionsHtml}</div>
+                <div id="feedback" class="mt-4 text-center font-bold"></div>
+            `;
+
+            document.querySelectorAll('.quiz-option').forEach(button => {
+                button.addEventListener('click', handleAnswer);
+            });
+        }
+
+        function handleAnswer(e) {
+            const selectedOption = e.target.textContent;
+            const questionData = quizQuestions[currentQuestionIndex];
+            const feedbackEl = document.getElementById('feedback');
+            
+            document.querySelectorAll('.quiz-option').forEach(btn => btn.disabled = true);
+
+            if (selectedOption === questionData.answer) {
+                e.target.classList.add('correct');
+                feedbackEl.textContent = "כל הכבוד! תשובה נכונה!";
+                feedbackEl.className = "mt-4 text-center font-bold text-green-500";
+                score++;
+            } else {
+                e.target.classList.add('incorrect');
+                feedbackEl.textContent = `טעות... התשובה הנכונה היא: ${questionData.answer}`;
+                feedbackEl.className = "mt-4 text-center font-bold text-red-500";
+                // Highlight the correct answer
+                document.querySelectorAll('.quiz-option').forEach(btn => {
+                    if (btn.textContent === questionData.answer) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+            
+            setTimeout(() => {
+                currentQuestionIndex++;
+                showQuizQuestion();
+            }, 2500);
+        }
+
+        function showQuizResults() {
+             const quizBody = document.getElementById('quiz-body');
+             const percentage = Math.round((score / quizQuestions.length) * 100);
+             let resultMessage = '';
+             if (percentage > 80) {
+                 resultMessage = "אלופים! אתם מוכנים לתאילנד!";
+             } else if (percentage > 50) {
+                 resultMessage = "לא רע בכלל! עוד קצת ונהיה מומחים.";
+             } else {
+                 resultMessage = "אולי כדאי לעבור שוב על המסלול... 😉";
+             }
+
+             quizBody.innerHTML = `
+                <div class="text-center">
+                    <h3 class="text-2xl font-bold mb-2">החידון הסתיים!</h3>
+                    <p class="text-lg text-slate-700">הצלחתם לענות נכון על <span class="font-bold text-teal-600">${score}</span> מתוך <span class="font-bold">${quizQuestions.length}</span> שאלות.</p>
+                    <p class="text-xl font-bold mt-4">${resultMessage}</p>
+                    <button id="restart-quiz" class="mt-6 bg-teal-600 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:bg-teal-700 transition-colors">שחקו שוב</button>
+                </div>
+             `;
+             document.getElementById('restart-quiz').addEventListener('click', () => {
+                 currentQuestionIndex = 0;
+                 score = 0;
+                 showQuizQuestion();
+             });
+        }
+
 
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
@@ -635,7 +817,11 @@
                 const activeContent = document.getElementById(`${tabId}-content`);
                 activeContent.classList.remove('hidden');
 
-                if (tabId !== 'overview') {
+                if (tabId === 'quiz') {
+                    if(activeContent.innerHTML === '') {
+                        generateQuiz();
+                    }
+                } else if (tabId !== 'overview') {
                     if (activeContent.innerHTML === '') {
                         generateContent(tabId);
                         setupEventListeners(tabId);
@@ -655,7 +841,7 @@
 
         const promoSentences = [
             "ברכות למשפחת ראש וביטן!",
-            "ברוכים הבאים לטיול השנתי של משפחת ראש ותאילנד לשנת 2025 ",
+            "ברוכים הבאים לטיול השנתי לתאילנד לשנת 2025 ",
             "בניגוד למנהגנו בעבר והרגלנו בקודש, הפעם הוכן לטיול מסלול מסודר עם לוחות זמנים",
             "שאנו גם נעמוד בהם (אין מצב שלא)",
             "משימות ואחראים:",
@@ -666,7 +852,8 @@
             "נעם-אחראי מחשוב",
             "מיכל: גננת ורכזת פעילות של איתי אפרת ויאיר",
             "שמעון- משקיף מטעם האו\"ם",
-            "שיהיה טיול מהנה ומוצלח"
+            "אהוד - מאבטח של שמעון",
+            "שיהיה טיול מהנה ומוצלח!"
         ];
         let sentenceIndex = 0;
 
@@ -684,14 +871,14 @@
             setTimeout(() => {
                 promoContainer.innerHTML = '';
                 const p = document.createElement('p');
-                p.className = 'promo-text text-2xl md:text-3xl font-semibold';
+                p.className = 'promo-text text-3xl md:text-4xl font-semibold';
                 p.textContent = promoSentences[sentenceIndex];
                 promoContainer.appendChild(p);
                 
                 setTimeout(() => p.classList.add('visible'), 50);
 
                 sentenceIndex++;
-            }, 1500); // Wait for fade out before showing next
+            }, 1500); 
         };
 
         const hideSplash = () => {
@@ -702,7 +889,6 @@
 
         skipSplashButton.addEventListener('click', hideSplash);
         
-        // Start promo
         showNextSentence();
         promoInterval = setInterval(showNextSentence, 6000);
 
