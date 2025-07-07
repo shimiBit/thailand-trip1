@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מסלול אלטרנטיבי לתאילנד - חופים, שופינג והרפתקאות</title>
+    <title>מסלול טיול לתאילנד - משפחת ראש וביטן 2025</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- Chosen Palette: Warm Neutrals (amber/stone background, dark slate text, subtle teal accents) -->
-    <!-- Application Structure Plan: A tab-based SPA for intuitive navigation between destinations (Overview, Phuket, Samui, Bangkok). This structure avoids lengthy scrolling and allows immediate access to relevant information. Each destination tab features a daily accordion. Clicking a day expands the plan and dynamically updates an adjacent Google Map with the day's route or location. This seamlessly integrates planning and navigation, making it highly usable. The Overview tab provides a high-level summary and a visual chart of the trip's themes. -->
-    <!-- Visualization & Content Choices: Report Info: Itinerary activities -> Goal: Compare -> Viz/Presentation Method: Doughnut Chart -> Interaction: Hover for data -> Justification -> Library/Method: Chart.js for a quick visual summary of the trip's focus (Adventure vs. Shopping vs. Beach). Report Info: Daily itineraries -> Goal: Organize & Guide -> Viz/Presentation Method: HTML/CSS accordion + embedded Google Map iframe -> Interaction: Clicking a day's header updates the map's src URL via JavaScript -> Justification: Creates a focused, task-oriented view, linking the plan to its geographical context. Report Info: Costs, tips, flight info -> Goal: Inform -> Viz/Presentation Method: Structured text blocks with icons (💰, 💡, ✈️) -> Interaction: Static display -> Justification: Clear and direct presentation of essential data. -->
+    <!-- Application Structure Plan: A tab-based SPA for intuitive navigation between destinations (Overview, Phuket, Samui, Bangkok, Quiz). This structure avoids lengthy scrolling and allows immediate access to relevant information. Each destination tab features a daily accordion. Clicking a day expands the plan and dynamically updates an adjacent Google Map with the day's route or location. This seamlessly integrates planning and navigation. The Overview tab provides a high-level summary and an interactive map with a Table of Contents. -->
+    <!-- Visualization & Content Choices: Report Info: Itinerary activities -> Goal: Compare -> Viz/Presentation Method: Doughnut Chart -> Interaction: Hover for data -> Justification -> Library/Method: Chart.js for a quick visual summary of the trip's focus. Report Info: Daily itineraries -> Goal: Organize & Guide -> Viz/Presentation Method: HTML/CSS accordion + embedded Google Map iframe -> Interaction: Clicking a day's header updates the map's src URL via JavaScript -> Justification: Creates a focused, task-oriented view. Report Info: All other data -> Goal: Inform -> Viz/Presentation Method: Structured text blocks with icons -> Interaction: Static display -> Justification: Clear and direct presentation. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
@@ -43,12 +43,29 @@
             overflow: hidden;
             background-color: #e5e7eb;
         }
-        .chart-container {
+        .chart-container-small {
             position: relative;
-            height: 300px;
+            height: 250px;
             width: 100%;
-            max-width: 300px;
+            max-width: 400px;
             margin: auto;
+        }
+        .timeline-item {
+            border-right: 3px solid #0d9488;
+            padding-right: 1.5rem;
+            position: relative;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            right: -9px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: white;
+            border: 3px solid #0d9488;
         }
         .map-toggle-button.active {
             background-color: #0d9488;
@@ -72,7 +89,7 @@
     <div id="main-content" class="container mx-auto p-2 sm:p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-teal-800">טיול לתאילנד שנת 2025</h1>
-            <p class="text-base sm:text-lg text-slate-600 mt-2">חופים, שופינג והרפתקאות | יולי 2025</p>
+            <p class="text-base sm:text-lg text-slate-600 mt-2">מסלול הטיול האינטראקטיבי</p>
         </header>
 
         <nav id="nav-tabs" class="flex flex-wrap justify-center gap-2 mb-8">
@@ -87,14 +104,10 @@
             <!-- Overview Tab -->
             <div id="overview-content" class="tab-content">
                 <div class="bg-white p-4 md:p-6 rounded-2xl shadow-lg">
-                    <h2 class="text-2xl font-bold text-teal-700 mb-4 border-b-2 pb-2 border-teal-200">ברכות למשפחת ראש וביטן!</h2>
-                    <p class="mb-6 text-slate-700">ברוכים הבאים למסלול הטיול השנתי שלנו לתאילנד. לחצו על הלשוניות השונות כדי לראות את תוואי הטיול ולוחות הזמנים. חופשה מהנה לכולם!</p>
-                    
-                    <div class="bg-teal-50 border-r-4 border-teal-500 p-4 rounded-lg">
-                        <h3 class="text-xl font-semibold text-teal-800 mb-2 text-center">מיקוד הטיול</h3>
-                         <div class="chart-container">
-                            <canvas id="tripFocusChart"></canvas>
-                        </div>
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4 border-b-2 pb-2 border-teal-200">ציר הזמן של ההרפתקה</h2>
+                    <p class="mb-6 text-slate-700">ברוכים הבאים למסלול הטיול השנתי שלנו לתאילנד. לפניכם ציר הזמן המלא של הטיול, מההמראה ועד הנחיתה חזרה. לחצו על כל שלב כדי לראות את הפרטים המלאים.</p>
+                    <div id="full-timeline-container" class="space-y-4">
+                        <!-- Timeline will be generated here by JavaScript -->
                     </div>
                 </div>
             </div>
@@ -125,7 +138,7 @@
                     {
                         date: "5-6 ביולי: המראה ונחיתה",
                         title: "טיסות, הגעה והתמקמות",
-                        description: "שישי: המראה מנתב\"ג (TLV) בשעה 23:30 בטיסת אל על LY81. שבת: נחיתה בבנגקוק (15:10), מעבר לטיסת המשך PG277 לפוקט (17:00), נחיתה ב-18:30 והעברה למלון. הערב מוקדש למנוחה וארוחת שבת בבית חב\"ד.",
+                        description: "שישי: הגעה לנמל התעופה בן גוריון (TLV) סביב השעה 20:30. המראה בשעה 23:30 בטיסת אל על LY81. שבת: נחיתה בבנגקוק (BKK) בשעה 15:10, מעבר לטיסת המשך PG277 לפוקט (HKT) בשעה 17:00. נחיתה בפוקט ב-18:30 והעברה למלון. הערב מוקדש למנוחה וארוחת שבת בבית חב\"ד.",
                         transport: "🚗 מונית/Grab משדה התעופה למלון (כ-600-800 באט).",
                         cash: "💵 כ-1,000 באט לנסיעה וארוחת ערב ראשונה.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Phuket+International+Airport,נמל+התעופה+של+פוקט&destination=Hotel+Indigo+Phuket+Patong,מלון+אינדיגו+פוקט",
@@ -170,7 +183,7 @@
                     {
                         date: "11 ביולי: טיסה לקו סמוי",
                         title: "פרידה מפוקט ומעבר לאי השכן",
-                        description: "✈️ בוקר: צ'ק-אאוט וטיסה מפוקט (HKT) לקו סמוי (USM) בטיסת בנגקוק איירווייז PG250.",
+                        description: "✈️ בוקר: צ'ק-אאוט ונסיעה לשדה התעופה בפוקט (הגעה סביב 09:00). המראה בשעה 11:00 מפוקט (HKT) לקו סמוי (USM) בטיסת בנגקוק איירווייז PG250. נחיתה צפויה ב-11:55.",
                         transport: "🚗 מונית לשדה התעופה (כ-600-800 באט) + טיסת פנים.",
                         cash: "💵 כ-1,000 באט לנסיעה לשדה וקניות קטנות.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Hotel+Indigo+Phuket+Patong,מלון+אינדיגו+פוקט&destination=Phuket+International+Airport,נמל+התעופה+של+פוקט",
@@ -237,7 +250,7 @@
                      {
                         date: "20 ביולי: טיסה לבנגקוק",
                         title: "פרידה מהאיים וחזרה לעיר הגדולה",
-                        description: "✈️ טיסת צהריים מקו סמוי (USM) לבנגקוק (BKK) בטיסת בנגקוק איירווייז PG150.",
+                        description: "✈️ טיסת צהריים מקו סמוי (USM) לבנגקוק (BKK) בטיסת בנגקוק איירווייז PG150. המראה: 14:30, נחיתה: 15:35. יש להגיע לשדה סביב 12:30.",
                         transport: "🚗 מונית לשדה התעופה + טיסת פנים.",
                         cash: "💵 כ-600 באט לנסיעה לשדה.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Avani+Chaweng+Samui+Hotel,מלון+אבאני&destination=Samui+International+Airport,נמל+התעופה+של+קוסמוי",
@@ -288,7 +301,7 @@
                     {
                         date: "23 ביולי: טיסה הביתה",
                         title: "קניות אחרונות ופרידה",
-                        description: "נצלצל את הבוקר לקניות אחרונות, התארגנות, ונסיעה לשדה התעופה עם לב מלא בחוויות ומזוודות מלאות בקניות.",
+                        description: "בוקר של קניות אחרונות והתארגנות. צ'ק-אאוט מאוחר מהמלון ונסיעה לשדה התעופה סוברנבהומי (BKK) סביב השעה 21:00 לקראת טיסת הלילה חזרה הביתה.",
                         transport: "🚗 מונית/Grab לשדה התעופה (כ-400-500 באט).",
                         cash: "💵 מזומן אחרון לקניות ושתיה בשדה.",
                         mapUrl: "https://www.google.com/maps/embed/v1/directions?key=API_KEY_PLACEHOLDER&origin=Sindhorn+Midtown+Hotel+Bangkok,מלון+סינדהורן+מידטאון&destination=Suvarnabhumi+Airport,+Bangkok,נמל+התעופה+סוברנבהומי",
@@ -620,3 +633,4 @@
 
 </body>
 </html>
+
